@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>  
+    div.padded {  
+      padding-top: 0px;  
+      padding-right: 100px;  
+      padding-bottom: 0.25in;  
+      padding-left: 100px;  
+    }  
+  </style> 
+<title>Exam 1 Makeup |  CS 184</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+</head>
+<body>
+<br />
+<h1 align="middle">Exam 1 Makeup: Additional Features to PathTracer</h1>
+    <h2 align="middle">Kevin Tseng</h2>
+    <h2 align="middle"><a href="https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/exam-1-makeup/index.html">https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/exam-1-makeup/index.html</a></h2>
+    <h2 align="middle"><a href="https://github.com/cal-cs184-student/sp25-exam-1-makeup-descartesdemon">https://github.com/cal-cs184-student/sp25-exam-1-makeup-descartesdemon</a></h2>
+    
+    <div class="padded">
+
+        
+
+        <h3 align="middle">Part 1. Mirror and Glass Materials</h3>
+
+        <p><b>
+            Show a sequence of six images of scene `CBspheres.dae` rendered with `max_ray_depth` set to 0, 1, 2, 3, 4, 5, and 100. The other settings should be at least 64 samples per pixel and 4 samples per light. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                  <tr>
+                    <td style="text-align: center;">
+                      <img src="pics/spheres_64_4_0.png" width="400px"/>
+                      <figcaption>0 max ray depth</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                      <img src="pics/spheres_64_4_1.png" width="400px"/>
+                      <figcaption>1 max ray depth</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/spheres_64_4_2.png" width="400px"/>
+                        <figcaption>2 max ray depth</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                    <td style="text-align: center;">
+                      <img src="pics/spheres_64_4_3.png" width="400px"/>
+                      <figcaption>3 max ray depth</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                      <img src="pics/spheres_64_4_4.png" width="400px"/>
+                      <figcaption>4 max ray depth</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/spheres_64_4_5.png" width="400px"/>
+                        <figcaption>5 max ray depth</figcaption>
+                      </td>
+                  </tr>
+                  <tr>
+                    <td colspan="3" style="text-align: center;">
+                        <img src="pics/spheres_64_4_100.png" width="400px"/>
+                        <figcaption>100 max ray depth</figcaption>
+                      </td>
+                  </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+        <p><b>
+            Point out the new multibounce effects that appear in each image. 
+        </b></p>
+        <p>0 depth: Light from light source only.</p>
+        <p>1 depth: Reflection of directly emitted light on both balls.</p>
+        <p>2 depth: Direct lighting from walls appears on the reflective ball. Very faint reflection of the room appears on the right refractive ball.</p>
+        <p>3 depth: Ceiling appears on left reflective ball. Refracted image of the corner of the room appears on the right refractive ball. Previous reflection on the right ball becomes invisible. A hole in the shadow emerges below the right ball.</p>
+        <p>4 depth: The right ball's image on the left ball now shows a refraction of the room. A spot of light appears on the right wall.</p>
+        <p>5 depth: No/minimal changes.</p>
+        <p>100 depth: No/minimal changes.</p>
+        <br>
+        <p><b>
+            Explain how these bounce numbers relate to the particular effects that appear. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            With 0 bounces, the only light that hits the camera is the light that comes directly from the light source (camera->light).
+        </p>
+        <p>
+            With 1 bounce, light that bounces off the walls and floors is added (camera->wall/floor->light). Additionally, some camera rays bounce off the balls and are directed to the light, producing the white reflection of the light that is visible at 1 max ray depth (camera->ball->light).
+        </p>
+        <p>
+            With 2 bounces, reflections of the room on the balls become possible (camera->ball->wall->light).
+        </p>
+        <p>
+            At 3 bounces, the ceiling becomes visible on the reflective ball (camera->ball->ceiling→wall/floor->light), and the refracted image of the room finally appears (camera->ball entry->ball exit->wall->light).
+        </p>
+        <p>
+            At 4 bounces, the right ball's appearance on the left ball's reflection correctly shows the refraction of the room. (camera->left ball->right ball entry->right ball exit->wall->light)
+        </p>
+        <p>At higher numbers of bounces, we reach diminishing returns and the additional effects become insignificant.</p>
+        <br>
+
+
+        <h3 align="middle">Part 2. Microfacet Material</h3>
+        <p><b>
+            Show a screenshot sequence of 4 images of scene `CBdragon_microfacet_au.dae` rendered with $\alpha$ set to 0.005, 0.05, 0.25 and 0.5. The other settings should be at least 128 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Describe the differences between different images. Note that, to change the $\alpha$, just open the .dae file and search for `microfacet`.
+        </b></p>
+        <p>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/dragon_128_1_5_alpha_005.png" width="400px"/>
+                        <figcaption>0.005 alpha</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/dragon_128_1_5_alpha_05.png" width="400px"/>
+                        <figcaption>0.05 alpha</figcaption>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/dragon_128_1_5_alpha_25.png" width="400px"/>
+                        <figcaption>0.25 alpha</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/dragon_128_1_5_alpha_5.png" width="400px"/>
+                        <figcaption>0.5 alpha</figcaption>
+                    </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+        <p><b>
+            Show two images of scene `CBbunny_microfacet_cu.dae` rendered using cosine hemisphere sampling (default) and your importance sampling. The sampling rate should be fixed at 64 samples per pixel and 1 samples per light. The number of bounces should be at least 5. Briefly discuss their difference.
+        </b></p>
+        <p>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/bunny_cu_cosine.png" width="400px"/>
+                        <figcaption>cosine sampling</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/bunny_cu_importance.png" width="400px"/>
+                        <figcaption>importance sampling</figcaption>
+                    </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+
+        <p>Importance sampling improves the reflection quality by making the reflection on the bunny less noisy. There are visibly less dark spots on the bunny's reflection of the room in the image made using importance sampling.</p>
+
+        <br>
+        <p><b>
+            Show at least one image with some other conductor material, replacing `eta` and `k`. Note that you should look up values for real data rather than modifying them arbitrarily. Tell us what kind of material your parameters correspond to. 
+        </b></p>
+        <p>
+            <img src="pics/dragon_pt.png" width="400px"/>
+            <figcaption>platinum (eta = (2.2652, 2.0821, 1.8815), k = (4.0741, 3.7096, 3.2289))</figcaption>
+        </p>
+        <br>
+        
+        
+        
+
+        <h3 align="middle">Part 3. Environment Lightl</h3>
+        <b>Pick one *.exr* file to use for all subparts here. Include a converted *.jpg* of it in your website so we know what map you are using.</b>
+        <p>
+            <img src="pics/grace.jpg" width="400px"/>
+            <figcaption>grace.exr</figcaption>
+        </p>
+        <p><b>
+            In a few sentences, explain the ideas behind environment lighting (i.e. why we do it/how it works).
+        </b></p>
+        <p>
+            Environment lighting helps to make a scene more realistic by simulating radiance from an environment surrounding the scene. In real settings, objects are not surrounded by black voids but are enclosed by outdoor spaces and rooms, so simulating the effect they have on lighting objects adds to the realism. It works by sampling the hemisphere around a camera ray's intersection with an object, and mapping the direction of the reflected ray to a radiance value from the environment.
+        </p>
+        <br>
+        <p><b>
+            Show the *probability_debug.png* file for the *.exr* file you are using, generated using the `save_probability_debug()` helper function after initializing your probability distributions.
+        </b></p>
+        <p>
+            <img src="pics/probability_debug.png" width="400px"/>
+            <figcaption>probability_debug.png</figcaption>
+        </p>
+        <br>
+        <p><b>
+            Use the `bunny_unlit.dae` scene and your environment map *.exr* file and render two pictures, one with uniform sampling and one with importance sampling. Use 4 samples per pixel and 64 samples per light in each. Compare noise levels. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            <img src="pics/bunny_unlit_4_64_1_uniform.png" width="400px"/>
+            <figcaption>uniform sampling</figcaption>
+        </p>
+        <p>
+            <img src="pics/bunny_unlit_4_64_1_importance.png" width="400px"/>
+            <figcaption>importance sampling</figcaption>
+        </p>
+        <p>There is significantly more noise in the image produced by uniform sampling of environment light versus importance sampling.</p>
+
+        <br>
+        <p><b>
+            Use a different image (if you did part 2, we recommend `bunny_microfacet_cu_unlit.dae`) and your environment map *.exr* file and render two pictures, one with uniform sampling and one with importance sampling. Use 4 samples per pixel and 64 samples per light in each. Compare noise levels. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            <img src="pics/bunny_cu_unlit_4_64_1_uniform.png" width="400px"/>
+            <figcaption>uniform sampling</figcaption>
+        </p>
+        <p>
+            <img src="pics/bunny_cu_unlit_4_64_1_importance.png" width="400px"/>
+            <figcaption>importance sampling</figcaption>
+        </p>
+        <br>
+
+        <p>Again, there is significantly more noise in the image produced by uniform sampling of environment light versus importance sampling.</p>
+
+
+
+        <h3 align="middle">Part 4. Depth of Field</h3>
+        <b>
+            For these subparts, we recommend using a microfacet BSDF scene to show off the cool out of focus effects you can get with depth of field!
+        </b>
+        <p><b>
+            In a few sentences, explain the differences between a pinhole camera model and a thin-lens camera model. 
+        </b></p>
+        <p>
+            In a pinhole camera model, a small amount of light from the scene passes through an infinitesimally small pinhole, on the other side of which is a sensor. Each point on the sensor corresponds to exactly one possible light ray from the scene due to the size of the pinhole. In a thin-lens model, a thin lens is used to refract multiple rays of light from each point on the scene which converge to an image on the other side. This means that the sensor on the other side of the lens can receive radiance from any point on the lens rather than a single ray through the tiny pinhole.
+        </p>
+        <p>A major consequence that arises from this difference between the models is that all points in the pinhole model appear focused whereas the thin lens model creates a depth of field in which some parts of the scene appear to be in focus. Since points on the sensor can receive light from multiple points on the scene, it is not necessary that they are the same point and the result is a blurring effect when they are not.</p>
+        <br>
+        <p><b>
+            Show a "focus stack" where you focus at 4 visibly different depths through a scene. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/focal_1_2.png" width="400px"/>
+                        <figcaption>1.2 focal distance</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/focal_1_4.png" width="400px"/>
+                        <figcaption>1.4 focal distance</figcaption>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/focal_1_6.png" width="400px"/>
+                        <figcaption>1.6 focal distance</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/focal_1_8.png" width="400px"/>
+                        <figcaption>1.8 focal distance</figcaption>
+                    </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+        <p><b>
+            Show a sequence of 4 pictures with visibly different aperture sizes, all focused at the same point in a scene. Make sure to include all screenshots.
+        </b></p>
+        <p>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <table style="width: 100%; text-align: center; border-collapse: collapse;">
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/lens_3.png" width="400px"/>
+                        <figcaption>3 lens radius</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/lens_13.png" width="400px"/>
+                        <figcaption>13 lens radius</figcaption>
+                    </td>
+                    </tr>
+                    <tr>
+                    <td style="text-align: center;">
+                        <img src="pics/lens_23.png" width="400px"/>
+                        <figcaption>23 lens radius</figcaption>
+                    </td>
+                    <td style="text-align: center;">
+                        <img src="pics/lens_43.png" width="400px"/>
+                        <figcaption>43 lens radius</figcaption>
+                    </td>
+                    </tr>
+                </table>
+            </div>
+        </p>
+        <br>
+
+    </div>
+</body>
+</html>
+

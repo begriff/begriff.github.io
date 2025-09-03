@@ -1,0 +1,303 @@
+<html>
+	<head>
+		<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+			h1 {
+				text-align: center;
+			}
+
+			.container {
+				margin: 0 auto;
+				padding: 60px 20%;
+			}
+
+			figure {
+				text-align: center;
+			}
+
+			img {
+				display: inline-block;
+			}
+
+			body {
+				font-family: 'Inter', sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+		<h1>CS184/284A Spring 2025 Homework 2 Write-Up</h1>
+		<div style="text-align: center;">Name: Kevin Tseng</div>
+
+		<br>
+
+		Link to webpage: <a href="https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/hw2/index.html">https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/hw2/index.html</a>
+
+		<br>
+		
+		Link to GitHub repository: <a href="https://github.com/cal-cs184-student/sp25-hw2-kevinteamm">https://github.com/cal-cs184-student/sp25-hw2-kevinteamm</a>
+
+		<!--
+		We've already added one heading per part, to make your write-up as navigable when grading. Please fit your write-up within these sections!
+		-->
+
+		<h2>Overview</h2>
+
+		<p>In this homework, I implemented the drawing of Bezier curves and surfaces from control points, and implemented normal calculation for Phong shading and various mesh operations for the MeshEdit program. Overall, I gained in-depth understanding of how shapes of objects are represented using both Bezier control points and the half-edge data structure. I found it exhausting to implement half-edge mesh operations with the pointer traveling and manipulation, but ultimately found it rewarding in the end to have a working product and a mastery of the data structure. Overall, I found it very interesting to see what goes on at this foundational layer of computer graphics and the anomalies that arise on the level of geometry and topology such as the asymmetry of the upscaled cube explored below.</p>
+
+		<h2>Section I: Bezier Curves and Surfaces</h2>
+
+		<h3>Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+		<p>I implemented one step of de Casteljau's algorithm to evaluate Bezier curves. It works by taking a vector of n initial control points and a parameter t, creating a vector, and filling that vector with n-1 intermediate control points calculated by linearly interpolating between each of the n-1 adjacent pairs in the initial vector using the parameter t. This vector of intermediate control points is then returned. De Casteljau's algorithm repeats this interpolation n-1 times and returns the single point that is left over after every layer of interpolation.</p>
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task1_0.png" width="300px"/>
+				  <figcaption>initial 6 control points</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task1_1.png" width="300px"/>
+				  <figcaption>1st interp</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task1_2.png" width="300px"/>
+				  <figcaption>2nd interp</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+
+				<td style="text-align: center;">
+					<img src="task1_3.png" width="300px"/>
+					<figcaption>3rd interp</figcaption>
+					</td>
+				<td style="text-align: center;">
+					<img src="task1_4.png" width="300px"/>
+					<figcaption>4th interp</figcaption>
+				  </td>
+				  <td style="text-align: center;">
+					<img src="task1_5.png" width="300px"/>
+					<figcaption>5th interp</figcaption>
+				  </td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+					<img src="task1_6_curve.png" width="300px"/>
+					<figcaption>6th interp and resulting curve</figcaption>
+				  </td>
+				  <td style="text-align: center;">
+					<img src="task1_modified.png" width="300px"/>
+					<figcaption>modified curve using GUI controls</figcaption>
+				  </td>
+			  </tr>
+			</table>
+		</div>
+
+		<h3>Part 2: Bezier surfaces with separable 1D de Casteljau</h3>
+		<p>I implemented de Casteljau's algorithm for Bezier surfaces by first taking parameters u, v, and an input n x n vector of vectors of control points. I then create an empty vector, run the algorithm on each row in the 2D input vector with the parameter u, storing the resulting points in the vector. I then run the algorithm for curves again on the 1D vector of control points that was filled by the previous step, producing the desired evaluated point on the surface at u, v. </p>
+
+		<img src="task2_teapot.png" width="400px"/>
+		<figcaption>teapot.bez</figcaption>
+
+		<h2>Section II: Triangle Meshes and Half-Edge Data Structure</h2>
+
+		<h3>Part 3: Area-weighted vertex normals</h3>
+		<p>I implemented area-weighted vertex normals for Phong shading by summing the cross products of the vectors that form the faces surrounding a vertex. The magnitudes of the cross products are the areas of the parallelograms they form, so their contribution to the sum is already weighted by area. I normalize the summed vector such that its norm is 1 to get the final area-weighted normal vector.</p>
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task3_1_2.png" width="400px"/>
+				  <figcaption>Flat shading</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task3_1_1.png" width="400px"/>
+				  <figcaption>Phong shading</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task3_2_1.png" width="400px"/>
+				  <figcaption>Flat shading</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task3_2_2.png" width="400px"/>
+				  <figcaption>Phong shading</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		<h3>Part 4: Edge flip</h3>
+		<p> I implemented the edge flip operation through a long process of rearranging pointers. I used some labeled drawings I made on paper to help me figure out what pointers in what half-edges needed to be changed.</p>
+
+		<p> Surprisingly, I did not have to debug this much and was able to have a working function on my first few tries.</p>
+
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task4_before.png" width="400px"/>
+				  <figcaption>Before flipping</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task4_after.png" width="400px"/>
+				  <figcaption>After some flips. Note apparently missing edges that arise from flipping perpendicular bisectors.</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		<h3>Part 5: Edge split</h3>
+		<p>I implemented the edge split operation by preserving the two half-edges and the edge that form the original edge, and creating 1 vertex, 3 edges, 6 half-edges, and 3 faces (1, 2 and 4, and 1 for boundary). Most of the process is tedious pointer assignment. I implement handling boundaries by adding the edges and half-edges to a side of the edge being split conditional on whether there is a boundary or not on a side. This is determined by the value of calling isBoundary() belonging to the two half-edges that form the initial edge.</p>
+
+		<p>My debugging journey was very tedious during the implementation of this operation. One specific issue that I faced was forgetting to assign the face pointers of some of the existing edges which had to be done due to the creation of new faces.</p>
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task5_splits.png" width="400px"/>
+				  <figcaption>Splits</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task5_splits_flips.png" width="400px"/>
+				  <figcaption>Splits and flips</figcaption>
+				</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task5_before_boundary.png" width="400px"/>
+				  <figcaption>Before boundary splits</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task5_after_boundary.png" width="400px"/>
+				  <figcaption>After some boundary splits</figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		<h3>Part 6: Loop subdivision for mesh upsampling</h3>
+		<p>The first step in my loop subdivision algorithm is calculating the new positions of the upsampled vertices. I first consider the vertices produced by splitting edges. If the edge is a boundary edge, then the new position of the vertice is simply the midpoint. Otherwise, I weigh the vertices using a formula: \(3/8 * (A + B) + 1/8 * (C + D)\) where A and B are the vertices along the split edge and C and D are the vertices on the ends of the triangles formed by the edge. For existing vertices, if the vertex is not on a boundary, then its new position is calculated using a formula for the case n = 3 \((1 - 9/16) * original\_position + 3/16 * original\_neighbor\_position\_sum\) and for any other case, then \((1 - n * 3/(8n)) * original\_position + 3/(8n) * original\_neighbor\_position\_sum\). If it is a boundary vertex, then its new position is \((3/4)original\_position + (v_1 + v_2)/8\) where v1 and v2 are its neighbors on the same boundary.</p>
+		
+		<p>The second step in my algorithm is splitting every edge. The initial edges must be iterated over in a cloned vector in order to avoid iterating over edges as they're being created.</p>
+
+		<p>The third step in my algorithm is flipping edges that are between a newly created and already existing point. I check to see if the isNew flags belonging to the two vertices forming the edge are different in order to determine whether they satisfy this condition.</p>
+
+		<p>Lastly, I update all the points' positions using their new positions calculated in step 1.</p>
+
+		<p>A difficulty I had on my journey implementing upsampling was a bug where my upsampled boundaries would become deformed on 1-triangle thick sections. This was due to neglecting to check that boundary vertices' neighbors would be on the same boundary face. Another difficulty involved improper flipping after manual splits caused by resetting flags in the wrong order which took a while to debug.</p>
+		
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="cow_1.png" width="400px"/>
+				  <figcaption>Original cow mesh. Vertices are clearly visible and lighting reveals the blocky surface.</figcaption>
+				</td>
+				<td style="text-align: center;">
+				  <img src="cow_2.png" width="400px"/>
+				  <figcaption>Cow mesh after upscaling. Individual vertices, edges, and faces are almost invisible due to how many there are. The shading's smoothness is similar to that of Phong shading applied to a lower-resolution mesh. </figcaption>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		Something of interest to note is how upsampling using this method might produce unexpected asymmetries on geometrically symmetrical figures such as this cube. Since the vertices are not connected using symmetric edges on the unaltered cube, the weighing functions that determine upsampled vertex positions work unevenly and produce this skewed shape.
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task_6_asym0.png" width="400px"/>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task_6_asym1.png" width="400px"/>
+				  </td>
+
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+					<img src="task_6_asym2.png" width="400px"/>
+					</td>
+				<td style="text-align: center;">
+				  <img src="task_6_asym3.png" width="400px"/>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		To fix this, the topology of the mesh can be made symmetrical as well by using the split operation to form this pattern on each side of the cube:
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="task_6_1_up.png" width="400px"/>
+				</td>
+				<td style="text-align: center;">
+				  <img src="task_6_2_up.png" width="400px"/>
+				  </td>
+
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+					<img src="task_6_3_up.png" width="400px"/>
+					</td>
+				<td style="text-align: center;">
+				  <img src="task_6_4_up.png" width="400px"/>
+				</td>
+			  </tr>
+			</table>
+		</div>
+
+		Mesh upsampling handles sharp corners by making them smoother as observable in the above upsampling of the cube. This rounding effect can be counteracted through the placement of more vertices to create a shape with sharper edges. More vertices in the beginning prevents the corners that we want to keep separate from coming close to each other in the weighing algorithms by giving them preexisting neighbors that keep their upsampled locations rigid.
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="pointy_pattern.png" width="400px"/>
+				</td>
+				<td style="text-align: center;">
+				  <img src="pointy_up1.png" width="400px"/>
+				  </td>
+
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+					<img src="pointy_up2.png" width="400px"/>
+					</td>
+				<td style="text-align: center;">
+				  <img src="pointy_up3.png" width="400px"/>
+				</td>
+			  </tr>
+			</table>
+		</div>
+	</div>
+
+	As a demo of how my extra credit boundary handling implementation works:
+	<div style="display: flex; flex-direction: column; align-items: center;">
+		<table style="width: 100%; text-align: center; border-collapse: collapse;">
+		  <tr>
+			<td style="text-align: center;">
+			  <img src="task6_boundary1.png" width="400px"/>
+			</td>
+			<td style="text-align: center;">
+			  <img src="task6_boundary2.png" width="400px"/>
+			  </td>
+
+		  </tr>
+		  <tr>
+			<td style="text-align: center;">
+				<img src="task6_boundary3.png" width="400px"/>
+				</td>
+		  </tr>
+		</table>
+	</div>
+</div>
+	</body>
+</html>

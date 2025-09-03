@@ -1,0 +1,195 @@
+<html>
+	<head>
+		<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+			h1 {
+				text-align: center;
+			}
+
+			.container {
+				margin: 0 auto;
+				padding: 60px 20%;
+			}
+
+			figure {
+				text-align: center;
+			}
+
+			img {
+				display: inline-block;
+			}
+
+			body {
+				font-family: 'Inter', sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+		<h1>CS184/284A Spring 2025 Homework 1 Write-Up</h1>
+		<div style="text-align: center;">Name: Kevin Tseng</div>
+
+		<br>
+
+		Link to webpage: <a href="https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/hw1/index.html">https://cal-cs184-student.github.io/hw-webpages-kevin-team-1/hw1/index.html</a>
+		
+		<br>
+
+		Link to GitHub repository: <a href="https://github.com/cal-cs184-student/sp25-hw1-kevin-team">https://github.com/cal-cs184-student/sp25-hw1-kevin-team</a>
+
+		<!--	
+		We've already added one heading per task, to make your write-up as navigable when grading. Please fit your write-up within these sections!
+		-->
+
+		<h2>Overview</h2>
+		
+		<p>In this homework, I built a software rasterizer capable of rendering textured triangles and applying various techniques to tackle aliasing issues. Specifically, I implemented the ability to rasterize single-color and interpolated triangles, supersampling, transforms, and lastly pixel sampling and texture sampling for applying textures to triangles. From this assignment, I gained an understanding of how such techniques affect the resulting image drawn by computers and the tradeoffs they entail. One thing in particular I found interesting was the clever idea to use precomputed mipmaps to help prevent aliasing as part of texture sampling, since I had seen mipmap files as part of video games I had downloaded in the past without knowing what they were for.</p>
+
+		<h2>Task 1: Drawing Single-Color Triangles</h2>
+		<p>I approach rasterizing triangles by only checking points in the triangle and on one side outside of the triangle (and a 1px line just outside one edge). For each vertical line, my algorithm uses a boolean variable to track whether the triangle has already been detected on that line or not. At the beginning, it is initialized to false since no samples have been done on that line and it likely stays false for some pixels, until it reaches the triangle. Once it reaches the triangle, it is set to true. When the loop detects that it has left the triangle and checks that the boolean is true, it knows that it is on the other side of the triangle and stops sampling for that line. This works because a triangle is a convex shape so a line only intersects it once, and the sampling loop will therefore only hit it consecutively without any breaks. </p>
+
+		<p>This algorithm is no worse if not better than one that checks each point in the sampling box because it avoids checking a generally large area on one side of the triangle.</p>
+		
+		<p>An empirical comparison between the speed of my algorithm and the naive approach that checks every point in the bounding box is below.</p>
+		
+		<figure>
+			<img src="images/task_1_optimized.png" alt="triangles zoomed in on an artifact" style="width:50%"/>
+			<figcaption>Optimized</figcaption>
+		</figure>
+
+		<figure>
+			<img src="images/task_1_unoptimized.png" alt="triangles zoomed in on an artifact" style="width:50%"/>
+			<figcaption>Naive</figcaption>
+		</figure>
+
+		<figure>
+			<img src="images/task_1.png" alt="triangles zoomed in on an artifact" style="width:100%"/>
+			<figcaption>Triangles drawn using the algorithm. Note the broken corners of very narrow triangles such as the one zoomed in on.</figcaption>
+		</figure>
+
+		<h2>Task 2: Antialiasing by Supersampling</h2>
+		<p>My supersampling algorithm divides each pixel into n (sample rate) subpixels uniformly in a grid and calculates the mean r, g, and b values from the n supersamples. I store the supersamples in the single sample_buffer vector of size width*height*sample_buffer.</p>
+
+		<p>Supersampling is useful because it allows the consideration of multiple aliases at the same pixel in determining what color to draw.</p>
+		
+		<p>I modified the rasterization pipeline by modifying the shape rasterization functions to support handling a supersized sample buffer using the coordinates corresponding to the dimension of the screen. I modified the resolve_to_framebuffer function to calculate an average color using n supersamples for each pixel it places in rgb_framebuffer_target.</p>
+		
+		<figure>
+			<img src="images/task2_1x.png" alt="triangles without antialiasing" style="width:100%"/>
+			<figcaption>1x sampling (no anti-aliasing).</figcaption>
+		</figure>
+
+		<figure>
+			<img src="images/task2_4x.png" alt="smooth triangles" style="width:100%"/>
+			<figcaption>4x supersampling</figcaption>
+		</figure>
+
+		<figure>
+			<img src="images/task2_16x.png" alt="smoother triangles" style="width:100%"/>
+			<figcaption>16x supersampling</figcaption>
+		</figure>
+
+		<p>Observe the zoomed in portion of the corner of the skinny red triangle. It appears broken in the first image and becomes smooother as more samples are gathered. It appears broken without anti-aliasing because the corner is where the thickness of the triangle approaches a size smaller than the pixels, so sampling at a precision that can capture the fine details of the corner becomes difficult. With anti-aliasing, many more samples are taken and factored into each pixel, so the minute details become accounted for in each pixel through their averaging. </p>
+		
+		<h2>Task 3: Transforms</h2>
+		
+		<p>For the transforms task, I implemented the transformation matrices and, to demonstrate their use, created a cubeman. This one is waving and is colored according to the colors of the ROBLOX noob.</p>
+		
+		<figure>
+			<img src="images/task_3.png" alt="roblox-inspired block person" style="width:100%"/>
+			<figcaption>cubeman</figcaption>
+		</figure>
+
+		<p>For extra credit, my transforms are also used to provide rotation functionality for displaying images. Pressing E rotates everything on-screen 15 degrees to counterclockwise and pressing R rotates the other way.</p>
+
+		<figure>
+			<img src="images/task_3_extra.png" alt="rotated version of previous image" style="width:100%"/>
+			<figcaption>rotation demo (30 deg clockwise)</figcaption>
+		</figure>
+
+		<h2>Task 4: Barycentric coordinates</h2>
+		
+		<p>Barycentric coordinates express a point as a weighted average of the three points that form a triangle. This can be visualized using the triangle below. Letting A, B, and C correspond to the top-left, top-right, and bottom points, redder points correspond to higher a values, greener points correspond to higher b values, and bluer points correspond to higher c values.</p>
+
+		<figure>
+			<img src="images/task_4_triangle.png" alt="rotated version of previous image" style="width:100%"/>
+			<figcaption>rotation demo (30 deg clockwise)</figcaption>
+		</figure>
+
+		<figure>
+			<img src="images/task_4_circle.png" alt="color gradient circle" style="width:100%"/>
+			<figcaption>test7.png</figcaption>
+		</figure>
+
+		<h2>Task 5: "Pixel sampling" for texture mapping</h2>
+		
+		<p>Pixel sampling is the process of mapping the color of a pixel on the screen to a pixel on a texture applied to a polygon. I implemented this by calculating the barycentric coordinates of each point on a textured triangle as in Task 4, and converting those back into standard (u,v) coordinates on the texture. The color of a triangle is then determined to be the color of the texture at the mapped point on the texture. Essentially, there is the triangle to be textured on the screen and a triangular region demarcated on the texture itself, and barycentric coordinates allow for mapping points between the two triangles.</p>
+
+		<p>There are two pixel sampling methods: nearest and bilinear. Nearest pixel sampling is the naive implementation of the process above, where each pixel's color on screen correpsonds to a single pixel's color on the the texture. Specifically, this pixel on the texture is the one nearest to the calculated point on the texture. The issue with this is that it produces a very coarse look on the final textured triangle. Bilinear sampling tries to resolve this by interpolating the color values of the four nearest pixels in order to produce a smoother look. Two row-wise weighted averages of the colors are calculated and then they are combined into a column-wise weighted average to produce the final interpolated result. Two linear interpretrations, hence the name bilinear.</p>
+		
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="images/task_5_1x_nearest.png" width="400px"/>
+				  <figcaption>1x sampling using nearest</figcaption>
+		</td>
+				<td style="text-align: center;">
+				  <img src="images/task_5_16x_nearest.png" width="400px"/>
+				  <figcaption>16x sampling using nearest</figcaption>
+		</td>
+			  </tr>
+			  <tr>
+				<td style="text-align: center;">
+				  <img src="images/task_5_1x_bilinear.png" width="400px"/>
+				  <figcaption>1x sampling using bilinear</figcaption>
+		</td>
+				<td style="text-align: center;">
+				  <img src="images/task_5_16x_bilinear.png" width="400px"/>
+				  <figcaption>16x sampling using bilinear</figcaption>
+		</td>
+			  </tr>
+			</table>
+		</div>
+		
+
+		<p>There seems to be minimal difference between the two 16x sampled images. The type of pixel filtering appears to have more effect at lower sampling rates. 1x bilinear pixel creeates much smoother longitude and latitude lines than 1x nearest but the difference is negligible at 16x. I think that supersampling at a much higher resolution can substitute for the effect of interpolated pixel sampling because supersampling already allows for the capturing of fine details otherwise subject to aliasing.</p>
+		<h2>Task 6: "Level Sampling" with mipmaps for texture mapping</h2>
+		
+		<p>Level sampling is the use of mipmaps, precomputed lower-resolution versions of the same texture, to help prevent the jagged aliasing look. I implemented it by first approximating the derivatives du/dx, dv/dx, du/dy, dv/dy. These approximate derivatives roughly represent how much distance on the texture is squeezed into the space between pixels on the screen. The higher these values are, the more colors there are from the texture that must be represented by a single pixel on the screen. These values are used to evaluate \(max(sqrt(( \frac{du}{dx})^2 + (\frac{dv}{dx})^2), sqrt((\frac{du}{dy})^2 + (\frac{dv}{dy})^2)) \) of which the logarithm base 2 is taken in order to determine how many times the resolution of the texture must be reduced, i.e., the level of the necessary mipmap.</p>
+
+		<p>I implemented level sampling with three options: zero, nearest, and linear. Zero always chooses level 0 mipmaps. Nearest calculates the above level and rounds it to the nearest number determine the necessary mipmap level. Linear interpolates between the two mipmap levels that surround the calculated logarithm.</p>
+
+		<p>Comparison of techniques: Adjusting pixel sampling and level sampling techniques have minimal effect on speed since it is not a big performance hit to perform the necessary interpolation calculations between pixels and/or levels. Supersampling causes massive performance loss since it is the same as drawing a much larger image of 4x or 16x the size, taking 4x or 16x the time. Pixel sampling doesn't really use much memory and level sampling uses a little more memory to store mipmaps, but supersampling requires storing a large sample buffer which uses a lot of memory. Pixel sampling on its own doesn't do much as shown below, and level sampling is very good for smoothing out jaggedness in the image. Supersampling, simply just sampling at a much higher frequency all across the image, undoubtedly has very high power.</p>
+		
+		<p>Here's a showcase of some of the combinations of effects:</p>
+
+		<div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+						<img src="images/l_zero_p_nearest.png" width="400px"/>
+						<figcaption>L_ZERO and P_NEAREST</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="images/l_zero_p_linear.png" width="400px"/>
+						<figcaption>L_ZERO and P_LINEAR</figcaption>
+					</td>
+				</tr>
+				<tr>
+					<td style="text-align: center;">
+						<img src="images/l_nearest_p_nearest.png" width="400px"/>
+						<figcaption>L_NEAREST and P_NEAREST</figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="images/l_nearest_p_linear.png" width="400px"/>
+						<figcaption>L_NEAREST and P_LINEAR</figcaption>
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		</div>
+	</body>
+</html>
