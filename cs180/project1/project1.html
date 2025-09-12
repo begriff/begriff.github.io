@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Project 1</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      margin: 0 auto;
+      padding: 60px 20%;
+    }
+
+    figure {
+      text-align: center;
+    }
+
+    img {
+      display: inline-block;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .dropdown {
+      margin: 20px 0;
+    }
+
+    .dropdown-header {
+      background-color: #f1f1f1;
+      padding: 15px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dropdown-header:hover {
+      background-color: #e9e9e9;
+    }
+
+    .dropdown-content {
+      display: none;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .dropdown-content.show {
+      display: block;
+    }
+
+    .arrow {
+      transition: transform 0.3s ease;
+    }
+
+    .arrow.rotated {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+    <h1>Images of the Russian Empire:
+      Colorizing the Prokudin-Gorskii photo collection (Project 1)</h1>
+    <h2>Overview</h2>
+    <p>Prokudin-Gorskii was a forerunner in the development of color photography by using his method of taking three photos of the same scene with red, green, and blue filters so that they may be combined to create a color image. He was unable to combine them into printed images but was able to project them into a color image.
+    </p>
+    <p>
+      In this project, I colorized the Prokudin-Gorskii photo collection using image processing techniques.
+    </p>
+
+    <h2>Approach</h2>
+    <p>
+      The collection provides many image files with the three red, green, and blue-filtered photos stacked vertically. The main issue in colorization is figuring out how to align the photos of different color channels since the photos do not come aligned. To be exact, I hold the blue photo fixed and individually align the red and green photos to it to obtain the final color image.
+    </p>
+
+    <p>
+      The three core techniques in my approach are the use of an edge detector, image pyramid, and L2 loss for similarity checking.
+    </p>
+
+    <p>
+      First, I construct an image pyramid. An image pyramid is essentially just an image represented at different resolutions in a list. It's called a pyramid because at one end of the list is the smallest, lowest-quality image (the top layer of the pyramid), and at the other end is the original full-size image (the bottom layer of the pyramid). The most efficient way to construct the image pyramid is to start with the original image and downsample it by a factor of 2, and then repeat this process on the downsampled image until the smallest image is reached. In my code, I actually truncate the pyramid such that the top layer is not too small since the search is not that computationally expensive at a certain point and the alignments from really downsampled images (like smaller than 32x32) are not that useful and cause issues.
+      </p>
+      <p>
+        Storing the images in this way allows us to do a much more efficient search on optimal alignment parameters. The naive approach to alignment is to do a brute force search on every possible displacement (within a predefined window) which can take forever for large images. However, with an image pyramid, we can do a search on a small space for a lower-resolution image, and use this result to narrow down our search window for higher-resolution images.
+    </p>
+
+      <p>In finding optimal alignment for each layer of the pyramid, I first apply a convolution-based (cross-correlation to be exact in signal processing language) edge detector. I approximate the partial derivatives of the image wrt x and wrt y by applying the filter over every pixel. In other words, I compute the dot product of the filter and the image at each overlapping pixel. I put the resulting values in a gradient vector and compute the norm to obtain the magnitude of the gradient, i.e., how much an image changes at a point. This gives us a nice edge detector since sharp changes correspond to edges. Pictures of the kernels are shown below and edge detector outputs are shown at the very bottom.</p>
+
+      <figure>
+        <img src="kernels.png" alt="kernels" style="max-width: 50%; height: auto;">
+        <figcaption>Kernels</figcaption>
+      </figure>
+      
+      <p>After applying the edge detector, I search for the optimal alignment by calculating the L2 loss of each possible alignment. In other words, for the overlapping pairs of pixels in each alignment, I take the difference of the pixel values and square it, and then sum all of those squared differences. The alignment with the lowest L2 loss is the optimal alignment. Geometrically, this is the alignment that minimizes the distance between the two images since L2 loss is just the Euclidean distance. A technical detail is that I crop out the edges of the image since we only care about aligning the actual image, not the weird edge things that appear in the original images. Another detail is that I only compute the score over the pixels that actually overlap in the two images.</p>
+
+      <p>I use this optimal alignment, scale it by 2 for the next layer of the pyramid, and repeat the process. This way, I have a prior alignment for the next layer of the pyramid to narrow down the search space for the next layer. Eventually, I reach the final layer and have an optimal alignment for the full-size image that I use for overlapping and return.</p>
+
+    <h2>Results on Required Examples</h2>
+    
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('no-cc-dropdown')">
+        <span>Without Color Correction (13 images)</span>
+        <span class="arrow" id="no-cc-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="no-cc-dropdown">
+        <figure>
+          <img src="example_no_cc/out_cathedral.jpg.jpg" alt="Cathedral" style="max-width: 100%; height: auto;">
+          <figcaption>cathedral</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_church.tif.jpg" alt="Church" style="max-width: 100%; height: auto;">
+          <figcaption>church</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_emir.tif.jpg" alt="Emir" style="max-width: 100%; height: auto;">
+          <figcaption>emir</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_harvesters.tif.jpg" alt="Harvesters" style="max-width: 100%; height: auto;">
+          <figcaption>harvesters</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_icon.tif.jpg" alt="Icon" style="max-width: 100%; height: auto;">
+          <figcaption>icon</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_italil.tif.jpg" alt="Italil" style="max-width: 100%; height: auto;">
+          <figcaption>italil</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_lastochikino.tif.jpg" alt="Lastochikino" style="max-width: 100%; height: auto;">
+          <figcaption>lastochikino</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_lugano.tif.jpg" alt="Lugano" style="max-width: 100%; height: auto;">
+          <figcaption>lugano</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_melons.tif.jpg" alt="Melons" style="max-width: 100%; height: auto;">
+          <figcaption>melons</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_monastery.jpg.jpg" alt="Monastery" style="max-width: 100%; height: auto;">
+          <figcaption>monastery</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_self_portrait.tif.jpg" alt="Self Portrait" style="max-width: 100%; height: auto;">
+          <figcaption>self-portrait</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_siren.tif.jpg" alt="Siren" style="max-width: 100%; height: auto;">
+          <figcaption>siren</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_no_cc/out_three_generations.tif.jpg" alt="Three Generations" style="max-width: 100%; height: auto;">
+          <figcaption>three_generations</figcaption>
+        </figure>
+
+        <figure>
+          <img src="example_no_cc/out_tobolsk.jpg.jpg" alt="Tobolsk" style="max-width: 100%; height: auto;">
+          <figcaption>tobolsk</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('cc-dropdown')">
+        <span>With Color Correction (13 images)</span>
+        <span class="arrow" id="cc-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="cc-dropdown">
+        <figure>
+          <img src="example_cc/out_cathedral.jpg.jpg" alt="Cathedral" style="max-width: 100%; height: auto;">
+          <figcaption>cathedral</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_church.tif.jpg" alt="Church" style="max-width: 100%; height: auto;">
+          <figcaption>church</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_emir.tif.jpg" alt="Emir" style="max-width: 100%; height: auto;">
+          <figcaption>emir</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_harvesters.tif.jpg" alt="Harvesters" style="max-width: 100%; height: auto;">
+          <figcaption>harvesters</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_icon.tif.jpg" alt="Icon" style="max-width: 100%; height: auto;">
+          <figcaption>icon</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_italil.tif.jpg" alt="Italil" style="max-width: 100%; height: auto;">
+          <figcaption>italil</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_lastochikino.tif.jpg" alt="Lastochikino" style="max-width: 100%; height: auto;">
+          <figcaption>lastochikino</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_lugano.tif.jpg" alt="Lugano" style="max-width: 100%; height: auto;">
+          <figcaption>lugano</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_melons.tif.jpg" alt="Melons" style="max-width: 100%; height: auto;">
+          <figcaption>melons</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_monastery.jpg.jpg" alt="Monastery" style="max-width: 100%; height: auto;">
+          <figcaption>monastery</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_self_portrait.tif.jpg" alt="Self Portrait" style="max-width: 100%; height: auto;">
+          <figcaption>self-portrait</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_siren.tif.jpg" alt="Siren" style="max-width: 100%; height: auto;">
+          <figcaption>siren</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="example_cc/out_three_generations.tif.jpg" alt="Three Generations" style="max-width: 100%; height: auto;">
+          <figcaption>three_generations</figcaption>
+        </figure>
+
+        <figure>
+          <img src="example_cc/out_tobolsk.jpg.jpg" alt="Tobolsk" style="max-width: 100%; height: auto;">
+          <figcaption>tobolsk</figcaption>
+        </figure>
+      </div>
+    </div>
+    
+
+    <h2>Results on Other Images</h2>
+
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('choice-no-cc-dropdown')">
+        <span>Choice Images Without Color Correction (3 images)</span>
+        <span class="arrow" id="choice-no-cc-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="choice-no-cc-dropdown">
+        <figure>
+          <img src="choice_no_cc/out_glass.tif.jpg" alt="Glass" style="max-width: 100%; height: auto;">
+          <figcaption>glass</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="choice_no_cc/out_khan.tif.jpg" alt="Khan" style="max-width: 100%; height: auto;">
+          <figcaption>khan</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="choice_no_cc/out_milan_cathedral.tif.jpg" alt="Milan Cathedral" style="max-width: 100%; height: auto;">
+          <figcaption>milan_cathedral</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('choice-cc-dropdown')">
+        <span>Choice Images With Color Correction (3 images)</span>
+        <span class="arrow" id="choice-cc-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="choice-cc-dropdown">
+        <figure>
+          <img src="choice_cc/out_glass.tif.jpg" alt="Glass" style="max-width: 100%; height: auto;">
+          <figcaption>glass</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="choice_cc/out_khan.tif.jpg" alt="Khan" style="max-width: 100%; height: auto;">
+          <figcaption>khan</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="choice_cc/out_milan_cathedral.tif.jpg" alt="Milan Cathedral" style="max-width: 100%; height: auto;">
+          <figcaption>milan_cathedral</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <h2>Alignment Offsets Data</h2>
+
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('offsets-dropdown')">
+        <span>Alignment Offsets Data</span>
+        <span class="arrow" id="offsets-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="offsets-dropdown">
+        <h4>Example Images Offsets</h4>
+        <pre><code id="example-offsets-content">Loading...</code></pre>
+
+        <h4>Choice Images Offsets</h4>
+        <pre><code id="choice-offsets-content">Loading...</code></pre>
+      </div>
+    </div>
+
+    <h2>Bells and Whistles</h2>
+
+    <p>For bells and whistles, I used an edge detector and added auomatic color correction.</p>
+
+    <h3>Edge Detection</h3>
+    <p>I noticed that the edge detector doesn't actually make that much of a difference using the naive non-pyramid approach, but with the image pyramid it is essential. I didn't test this thoroughly but I observed that my cathedral colorization worked fine without the edge detector and without the pyramid, but broke without the edge detector and with the pyramid.</p>
+
+    <div class="dropdown">
+      <div class="dropdown-header" onclick="toggleDropdown('edge-detect-dropdown')">
+        <span>Edge Detection Results (6 images)</span>
+        <span class="arrow" id="edge-detect-arrow">▼</span>
+      </div>
+      <div class="dropdown-content" id="edge-detect-dropdown">
+        <p>Here are the edge detection results showing the individual color channels (red, green, blue) for two example images:</p>
+
+        <h4>Church Image - Edge Detection by Color Channel</h4>
+        <figure>
+          <img src="edge_detect/out_church.tif_r.jpg" alt="Church Red Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Red channel edges</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="edge_detect/out_church.tif_g.jpg" alt="Church Green Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Green channel edges</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="edge_detect/out_church.tif_b.jpg" alt="Church Blue Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Blue channel edges</figcaption>
+        </figure>
+
+        <h4>Harvesters Image - Edge Detection by Color Channel</h4>
+        <figure>
+          <img src="edge_detect/out_harvesters.tif_r.jpg" alt="Harvesters Red Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Red channel edges</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="edge_detect/out_harvesters.tif_g.jpg" alt="Harvesters Green Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Green channel edges</figcaption>
+        </figure>
+        
+        <figure>
+          <img src="edge_detect/out_harvesters.tif_b.jpg" alt="Harvesters Blue Channel Edges" style="max-width: 100%; height: auto;">
+          <figcaption>Blue channel edges</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <h3>Automatic Color Correction</h3>
+
+    <p>I added both "Gray World" and "White Patch" automatic color correction as well. Gray world enforces the assumption that the mean color is gray, and white patch enforces the assumption that the brightest pixel is white. I implement this by calculating these statistics and using them to construct correction vectors that I add to the original image.
+    </p>
+      
+    <p>It's difficult to make a good algorithm for white patch color correction since these assumptions are often not true due to lighting conditions or scene content. The assumptions may not even be applicable since photos are often taken with the violation of these assumptions in mind for aesthetic purposes. A better approach might involve finding a way to extract the semantic content of the image in order to figure out what the colors ought to be.</p>
+    
+    <p>I display the results of gray world color correction above.</p>
+
+
+    <script>
+      function toggleDropdown(dropdownId) {
+        const content = document.getElementById(dropdownId);
+        const arrow = document.getElementById(dropdownId.replace('-dropdown', '-arrow'));
+        
+        if (content.classList.contains('show')) {
+          content.classList.remove('show');
+          arrow.classList.remove('rotated');
+        } else {
+          content.classList.add('show');
+          arrow.classList.add('rotated');
+          
+          // Load offset files when dropdown is opened
+          if (dropdownId === 'offsets-dropdown') {
+            loadOffsetFiles();
+          }
+        }
+      }
+
+      async function loadOffsetFiles() {
+        try {
+          // Load example offsets
+          const exampleResponse = await fetch('example_offsets.txt');
+          const exampleText = await exampleResponse.text();
+          document.getElementById('example-offsets-content').textContent = exampleText;
+          
+          // Load choice offsets
+          const choiceResponse = await fetch('choice_offsets.txt');
+          const choiceText = await choiceResponse.text();
+          document.getElementById('choice-offsets-content').textContent = choiceText;
+        } catch (error) {
+          console.error('Error loading offset files:', error);
+          document.getElementById('example-offsets-content').textContent = 'Error loading file';
+          document.getElementById('choice-offsets-content').textContent = 'Error loading file';
+        }
+      }
+    </script>
+
+</body>
+</html>
