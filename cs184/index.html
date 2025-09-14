@@ -67,24 +67,14 @@
 			<main>
 				<div class="content">
 					<ul>
-						<li><a href="/hw1/index.html">Homework 1</a></li>
-						<li><a href="/hw2/index.html">Homework 2</a></li>
-						<li><a href="/hw3/index.html">Homework 3</a></li>
-						<li><a href="/hw4/index.html">Homework 4</a></li>
-						<li><a href="/exam-1-makeup/index.html">Exam 1 Makeup</a></li>
+						<li><a href="hw1/index.html">Homework 1</a></li>
+						<li><a href="hw2/index.html">Homework 2</a></li>
+						<li><a href="hw3/index.html">Homework 3</a></li>
+						<li><a href="hw4/index.html">Homework 4</a></li>
+						<li><a href="exam-1-makeup/index.html">Exam 1 Makeup</a></li>
 					</ul>
 				</div>
 			</main>
 		</div>
 	</body>
-	<script>
-		var links = document.body.getElementsByTagName("a")
-		var a = window.location.href.indexOf(".io")
-		var repo_name = window.location.href.substring(a+3)
-		for(var i = 0; i < links.length; i++){
-			var link = links[i]
-			var actual_name = link.href.substring(link.href.indexOf(".io")+4)
-			link.href = repo_name + actual_name
-		}
-	</script>
 </html>
