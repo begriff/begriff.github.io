@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Project 2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      margin: 0 auto;
+      padding: 60px 20%;
+    }
+
+    figure {
+      text-align: center;
+    }
+
+    img {
+      display: inline-block;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .dropdown {
+      margin: 20px 0;
+    }
+
+    .dropdown-header {
+      background-color: #f1f1f1;
+      padding: 15px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dropdown-header:hover {
+      background-color: #e9e9e9;
+    }
+
+    .dropdown-content {
+      display: none;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .dropdown-content.show {
+      display: block;
+    }
+
+    .arrow {
+      transition: transform 0.3s ease;
+    }
+
+    .arrow.rotated {
+      transform: rotate(180deg);
+    }
+
+    img {image-rendering: pixelated;
+    image-rendering: crisp-edges; /* older syntax, fallback */
+    }
+  </style>
+</head>
+<body>
+    <h1>Fun With Filters and Frequencies (Project 1)</h1>
+    <h3>Overview</h3>
+    <p>In this project, I demonstrate many image manipulation techniques using signal processing concepts.
+    </p>
+
+    <h2>Part 1: Fun with Filters</h2>
+
+    <h3>Part 1.1: Convolutions from Scratch</h3>
+
+    <p>I implemented convolution using both 4 for loops (naive) and 2 for loops (vectorized). I implement it with 0 padding for borders. Here is the comparison between the three versions using a 9x9 box blur filter on a selfie of myself.</p>
+
+    <center>
+    <img src="part1/1/doge.jpg" width="300px"/>
+    <figcaption>original (before grayscale)
+    </figcaption>
+    </center>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/1/part1_1_custom_four.jpg" width="300px"/>
+					  <figcaption>my implementation (4 loops) <br>
+              3.079918417002773 s
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/1/part1_1_custom_two.jpg" width="300px"/>
+					  <figcaption>my implementation (2 loops) <br>
+              0.12622579201706685 s
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+						<img src="part1/1/part1_1_scipy.jpg" width="300px"/>
+						<figcaption>scipy implementation <br> 0.006352041003992781 s</figcaption>
+					  </td>
+				  </tr>
+			  </table>
+		</div>
+
+    <p>The results are identical between implementations. One thing to note is the dark border around the blurred images. This is due to zero padding since the result of each little convolution dot product on the border is driven down by the 0s. If I had used another type of padding like extending the borders outwards, this effect would not be present. This is the same between images because every implementation is set to use zero padding.</p>
+
+    <p>From a performance perspective, the four-loop implementation is very bad. My two-loop implementation is alright and scipy's version is very fast. The runtimes are shown above. The Python-only four-loop version is extremely inefficient since it doesn't take advantage of vectorization and in general high-level language implementations of these kinds of things are slow. The two-loop implementation is much better since we're able to manipulate data in parallel using NumPy's vectorization abilities and many of the convolution operations are handled using low-level compiled code. The scipy implementation is the fastest since the whole convolution function is likely written in performance-friendly code abstracted away by the package and probably uses clever optimizations beyond the scope of the class.</p>
+
+    <h3>Part 1.2: Finite Difference Operator</h3>
+
+    I convolve this image of a cameraman to demonstrate edge detection using convolution. I convolve using a basic [1, 0, -1] kernel for the partial derivative of the image wrt x and the transpose of this kernel for the partial derivative wrt y.
+
+    <center>
+      <img src="part1/2/cameraman.png" width="300px"/>
+      <figcaption>original 
+      </figcaption>
+    </center>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/2/part1_2_dx.png" width="300px"/>
+					  <figcaption>partial derivative wrt x
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/2/part1_2_dy.png" width="300px"/>
+					  <figcaption>partial derivative wrt y
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/2/part1_2_gradient_magnitude.png" width="300px"/>
+					  <figcaption>gradient
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/2/part1_2_gradient_magnitude_binarized.png" width="300px"/>
+					  <figcaption>binarized gradient
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <p>The binarized gradient has a cutoff value of 78. I chose this value because it gets rid of most of the noise while preserving the cameraman's edges. Unfortunately, some of the background is lost with this cutoff.</p>
+
+    <h3>Part 1.3: Derivative of Gaussian Filter</h3>
+
+    To try and get better results, I try applying a Gaussian blur (13 kernel size and 2 std as parameters) before performing edge detection like in the last part. The idea is that the blur will help remove noise while preserving the real edges which should be sharper and remain visible after the blur.
+
+    <center>
+      <img src="part1/3/part1_3_gaussian.png" width="150px"/>
+      <figcaption>gaussian kernel (normalized for display)
+      </figcaption>
+    </center>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_dx.png" width="300px"/>
+					  <figcaption>partial derivative wrt x
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_dy.png" width="300px"/>
+					  <figcaption>partial derivative wrt y
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_gradient_magnitude.png" width="300px"/>
+					  <figcaption>gradient
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_gradient_magnitude_binarized.png" width="300px"/>
+					  <figcaption>binarized gradient
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    The binarized gradient here has a cutoff of 30. We can observe that all of these post-filter results look much smoother and much of the noise in the grass is eliminated. This has the tradeoff though of making the background buildings less visible as well. Since a lot of the noise is gone, I'm able to choose a lower binarization threshold. Additionally, a lot of the existing edges in the gradient images are smoother after filtering.
+
+    <p>Since convolution is associative and commutative, we can do the same thing by convolving the dx and dy filters with the Gaussian filter in advance to get derivative of Gaussian filters. So, instead of convolving twice (Gaussian then derivatives or vice-versa), we can convolve once (derivative of Gaussian only).</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_dx_kernel.png" width="300px"/>
+					  <figcaption>derivaative of gaussian wrt x (normalized for display)
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/3/part1_3_gaussian_dy_kernel.png" width="300px"/>
+					  <figcaption>derivative of gaussian wrt y (normalized for display)
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    Demonstrating that this is the same, here are identical results (with the same binarization cutoff as well).
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part1/3/part1_3_derivative_gaussian_gradient_magnitude.png" width="300px"/>
+					  <figcaption>gradient
+            </figcaption>
+					</td>
+          <td style="text-align: center;">
+					  <img src="part1/3/part1_3_derivative_gaussian_gradient_magnitude_binarized.png" width="300px"/>
+					  <figcaption>binarized gradient
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <h2>Part 2: Fun with frequencies</h2>
+
+    <h3>Part 2.1: Image Sharpening</h3>
+
+    <p>I will use the unsharp masking technique to make images appear sharper. The idea of the technique is as follows: Blur the image to isolate the low frequencies. Subtract the low frequencies from the original image to isolate the high frequencies in the image. Add the isolated high freqneucies back to the original image with some scaling factor in order to artificially make the high frequencies stronger, creating a sharpening effect. Using some algebra, this can be combined into a single convolution operation where <code>x</code> is times and <code>*</code> is convolution:</p>
+
+    <code>img_sharpened = img + strength(img - (gaussian * img)) = ((1 + strength) x delta - alpha x gaussian) * img</code>
+
+    <center>
+      <td style="text-align: center;">
+        <img src="part2/1/taj.jpg" width="300px"/>
+        <figcaption>taj
+        </figcaption>
+      </td>
+    </center>
+
+    <p>Breaking this picture of the Taj Mahal into its low and high frequency components, we get this:</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/1/taj_blur.jpg" width="300px"/>
+					  <figcaption>low frequency
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/taj_hf.jpg" width="300px"/>
+					  <figcaption>high frequency
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <p>By adding the high frequency components back to the original Taj image, we can get a sharpening effect:</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/1/taj_sharpen1.jpg" width="300px"/>
+					  <figcaption>strength = 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/taj_sharpen3.jpg" width="300px"/>
+					  <figcaption>strength = 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/taj_sharpen5.jpg" width="300px"/>
+					  <figcaption>strength = 5
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <p>I also demonstrate this sharpening filter also on a picture from Planet of the Apes:</p>
+
+    <center>
+      <td style="text-align: center;">
+        <img src="part2/1/apes.jpg" width="300px"/>
+        <figcaption>taj
+        </figcaption>
+      </td>
+    </center>
+
+    <p>Breaking this picture into its low and high frequency components, we get this:</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/1/apes_blur.jpg" width="300px"/>
+					  <figcaption>low frequency
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/apes_hf.jpg" width="300px"/>
+					  <figcaption>high frequency
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <p>By adding the high frequency components back to the original apes image, we can get a sharpening effect:</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/1/apes_sharpen1.jpg" width="300px"/>
+					  <figcaption>strength = 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/apes_sharpen3.jpg" width="300px"/>
+					  <figcaption>strength = 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/1/apes_sharpen5.jpg" width="300px"/>
+					  <figcaption>strength = 5
+            </figcaption>
+					</td>
+				  </tr>
+			  </table>
+		</div>
+
+    <h3>Part 2.2: Hybrid Images</h3>
+
+    Hybrid images are images created using the high frequencies from one image and the low frequencies from another.
+
+    Some examples are shown below.
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/2/DerekPicture.jpg" width="300px"/>
+					  <figcaption>derek
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/2/nutmeg.jpg" width="300px"/>
+					  <figcaption>nutmeg
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="2" style="text-align: center;">
+					  <img src="part2/2/dereknutmeg.png" width="300px"/>
+					  <figcaption>dereknutmeg
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/2/capybara.jpg" width="300px"/>
+					  <figcaption>capybara
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/2/hedgehog.jpg" width="300px"/>
+					  <figcaption>hedgehog
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="2" style="text-align: center;">
+					  <img src="part2/2/capyhog.png" width="300px"/>
+					  <figcaption>capyhog
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/2/icecream.jpg" width="300px"/>
+					  <figcaption>ice cream
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/2/monkey.jpeg" width="300px"/>
+					  <figcaption>monkey
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="2" style="text-align: center;">
+					  <img src="part2/2/monkeycream.png" width="300px"/>
+					  <figcaption>monkey cream
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/2/hotdog.jpg" width="300px"/>
+					  <figcaption>hot dog
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/2/wienerdog.jpg" width="300px"/>
+					  <figcaption>wiener dog
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="2" style="text-align: center;">
+					  <img src="part2/2/suspicious_hotdog.png" width="300px"/>
+					  <figcaption>suspicious hot dog
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h4>Frequency analysis of suspicious hot dog</h4> 
+
+    <p>For the hot dog picture, I chose to use a Gaussian blur with <code>sigma = 6</code> and <code>kernel_size = 37</code>, and for the dog picture I chose <code>sigma = 1</code> and <code>kernel_size = 7</code> for the blur.</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/2/hotdog.jpg" width="300px"/>
+					  <figcaption>hot dog
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/2/hotdog_original_fourier.png" width="300px"/>
+					  <figcaption>hot dog log fourier transform
+            </figcaption>
+					</td>
+				  </tr>
+          <tr>
+            <td style="text-align: center;">
+              <img src="part2/2/wienerdog.jpg" width="300px"/>
+              <figcaption>hot dog
+              </figcaption>
+            </td>
+            <td style="text-align: center;">
+              <img src="part2/2/wiener_original_fourier.png" width="300px"/>
+              <figcaption>wiener dog log fourier transform (aligned)
+              </figcaption>
+            </td>
+            </tr>
+            <tr>
+              <td style="text-align: center;">
+                <img src="part2/2/hotdog_lowpass.png" width="300px"/>
+                <figcaption>hot dog low pass
+                </figcaption>
+              </td>
+              <td style="text-align: center;">
+                <img src="part2/2/hotdog_lowpass_fourier.png" width="300px"/>
+                <figcaption>hot dog low pass log fourier transform
+                </figcaption>
+              </td>
+              </tr>
+              <tr>
+                <td style="text-align: center;">
+                  <img src="part2/2/wiener_highpass.png" width="300px"/>
+                  <figcaption>wiener dog high pass
+                  </figcaption>
+                </td>
+                <td style="text-align: center;">
+                  <img src="part2/2/wiener_highpass_fourier.png" width="300px"/>
+                  <figcaption>wiener dog high pass log fourier transform
+                  </figcaption>
+                </td>
+                </tr>
+                <tr>
+                  <td style="text-align: center;">
+                    <img src="part2/2/suspicious_hotdog.png" width="300px"/>
+                    <figcaption>hybrid
+                    </figcaption>
+                  </td>
+                  <td style="text-align: center;">
+                    <img src="part2/2/suspicious_hotdog_fourier.png" width="300px"/>
+                    <figcaption>hybrid image log fourier transform
+                    </figcaption>
+                  </td>
+                  </tr>
+			</table>
+		</div>
+
+
+    <h3>Part 2.3: Gaussian and Laplacian Stacks</h3>
+
+   <p>In this part, I implement Gaussian and Laplacian stacks for use in multiresolution blending in the next part. The Gaussian stack is built by convolving over the original image using Gaussian kernels with larger and larger sigma values. I scale the sigma by a factor of 2 each layer. The Laplacian stack is built by subtracting between the Gaussian stack layers and adding the bottom Gaussian to the end.</p> 
+   
+   <p>I show the stacks applied to the construction of the "oraple." </p>
+
+    <h4>Apple Gaussian and Laplacian Stacks</h4>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Laplacian 0
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Laplacian 1
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Gaussian 2
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Laplacian 2
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/apple_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Laplacian 3
+            </figcaption>
+					</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">
+              <img src="part2/3/apple_gaussian_stack/4.jpg" width="200px"/>
+              <figcaption>Gaussian 4
+              </figcaption>
+            </td>
+            <td style="text-align: center;">
+              <img src="part2/3/apple_laplacian_stack/4.jpg" width="200px"/>
+              <figcaption>Laplacian 4
+              </figcaption>
+            </td>
+            </tr>
+            <tr>
+              <td style="text-align: center;">
+                <img src="part2/3/apple_gaussian_stack/5.jpg" width="200px"/>
+                <figcaption>Gaussian 5
+                </figcaption>
+              </td>
+              <td style="text-align: center;">
+                <img src="part2/3/apple_laplacian_stack/5.jpg" width="200px"/>
+                <figcaption>Laplacian 5
+                </figcaption>
+              </td>
+              </tr>
+			</table>
+		</div>
+
+    <h4>Orange Gaussian and Laplacian Stacks</h4>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Laplacian 0
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Laplacian 1
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Gaussian 2
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Laplacian 2
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Laplacian 3
+            </figcaption>
+					</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">
+              <img src="part2/3/orange_gaussian_stack/4.jpg" width="200px"/>
+              <figcaption>Gaussian 4
+              </figcaption>
+            </td>
+            <td style="text-align: center;">
+              <img src="part2/3/orange_laplacian_stack/4.jpg" width="200px"/>
+              <figcaption>Laplacian 4
+              </figcaption>
+            </td>
+            </tr>
+            <tr>
+              <td style="text-align: center;">
+                <img src="part2/3/orange_gaussian_stack/5.jpg" width="200px"/>
+                <figcaption>Gaussian 5
+                </figcaption>
+              </td>
+              <td style="text-align: center;">
+                <img src="part2/3/orange_laplacian_stack/5.jpg" width="200px"/>
+                <figcaption>Laplacian 5
+                </figcaption>
+              </td>
+              </tr>
+			</table>
+		</div>
+
+    <h4>3.42 Reproduction</h4>
+
+    <p>Here I reproduce the outcomes of Figure 3.42 in Szelski (Ed 2) page 167.</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/a.jpg" width="200px"/>
+					  <figcaption>a
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/b.jpg" width="200px"/>
+					  <figcaption>b
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/c.jpg" width="200px"/>
+					  <figcaption>c
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/d.jpg" width="200px"/>
+					  <figcaption>d
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/e.jpg" width="200px"/>
+					  <figcaption>e
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/f.jpg" width="200px"/>
+					  <figcaption>f
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/g.jpg" width="200px"/>
+					  <figcaption>g
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/h.jpg" width="200px"/>
+					  <figcaption>h
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/i.jpg" width="200px"/>
+					  <figcaption>i
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/j.jpg" width="200px"/>
+					  <figcaption>j
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/k.jpg" width="200px"/>
+					  <figcaption>k
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/3/3_42_results/l.jpg" width="200px"/>
+					  <figcaption>l
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    The gradual construction of the oraple is done by using a mask that is gradually blurred in a Gaussian pyramid which I show here. Each layer of the Laplacian stack is either multiplied by the mask or 1 minus the mask. The results are then summed over to get the final image.
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 0
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 1
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 2
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 3
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 4
+            </figcaption>
+					</td>
+          </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/3/orange_apple_mask_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    
+    <h3>Part 2.4: Multiresolution Blending</h3>
+
+    I show the further application of the stacks to creating two further pictures.
+
+    <h4>winter and autumn road</h4>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter.jpg" width="300px"/>
+					  <figcaption>winter
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn2.jpg" width="300px"/>
+					  <figcaption>autumn
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="2" style="text-align: center;">
+					  <img src="part2/4/autumnwinter.jpg" width="500px"/>
+					  <figcaption>autumnwinter
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Winter Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Winter Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Winter Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/winter_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Winter Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Autumn Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Autumn Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Autumn Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Autumn Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Autumn Winter Mask Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_mask_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Autumn Winter Combined Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/autumn_winter_combined_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h3>lion and cat</h3>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/lioncat_lion.jpg" width="300px"/>
+					  <figcaption>lion
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lioncat_cat.jpg" width="300px"/>
+					  <figcaption>cat
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lioncat_mask.jpg" width="300px"/>
+					  <figcaption>special mask
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="3" style="text-align: center;">
+					  <img src="part2/4/lioncat.jpg" width="500px"/>
+					  <figcaption>lioncat
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Lion Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Lion Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Lion Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/lion_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Lion Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Lion Mask Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_mask_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Lion Combined Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/cat_lion_combined_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h3>cat and chihuahua</h3>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2.jpg" width="300px"/>
+					  <figcaption>cat
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1.jpg" width="300px"/>
+					  <figcaption>chihuahua
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_mask.jpg" width="300px"/>
+					  <figcaption>special mask
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td colspan="3" style="text-align: center;">
+					  <img src="part2/4/catwawa.jpg" width="500px"/>
+					  <figcaption>catwawa
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat (catwawa_2) Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Cat Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat (catwawa_2) Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_2_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Cat Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Chihuahua (catwawa_1) Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Chihuahua Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Chihuahua (catwawa_1) Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Chihuahua Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Chihuahua Mask Gaussian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/0.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/1.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/2.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/3.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/4.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_mask_gaussian_stack/5.jpg" width="200px"/>
+					  <figcaption>Mask Gaussian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    <h5>Cat Chihuahua Combined Laplacian Stack</h5>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+			<table style="width: 100%; text-align: center; border-collapse: collapse;">
+				<tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/0.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 0
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/1.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 1
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/2.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 2
+            </figcaption>
+					</td>
+				  </tr>
+        <tr>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/3.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 3
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/4.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 4
+            </figcaption>
+					</td>
+					<td style="text-align: center;">
+					  <img src="part2/4/catwawa_1_catwawa_2_combined_laplacian_stack/5.jpg" width="200px"/>
+					  <figcaption>Combined Laplacian 5
+            </figcaption>
+					</td>
+          </tr>
+			</table>
+		</div>
+
+    
+    
+</body>
+</html>
