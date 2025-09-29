@@ -115,9 +115,41 @@
 
     <p>From a performance perspective, the four-loop implementation is very bad. My two-loop implementation is alright and scipy's version is very fast. The runtimes are shown above. The Python-only four-loop version is extremely inefficient since it doesn't take advantage of vectorization and in general high-level language implementations of these kinds of things are slow. The two-loop implementation is much better since we're able to manipulate data in parallel using NumPy's vectorization abilities and many of the convolution operations are handled using low-level compiled code. The scipy implementation is the fastest since the whole convolution function is likely written in performance-friendly code abstracted away by the package and probably uses clever optimizations beyond the scope of the class.</p>
 
+    <h4>Code Snippets</h4>
+
+    <center>
+      <img src="part1/1/convolve_4_loops_snippet.png" width="600px"/>
+      <figcaption>4 loops
+      </figcaption>
+    </center>
+
+    <center>
+      <img src="part1/1/convolve_2_loops_snippet.png" width="600px"/>
+      <figcaption>2 loops
+      </figcaption>
+    </center>
+
+    <h4>Dx and Dy filters</h4>
+
+    <p>Showing convolution using [1, 0, -1] for the dx filter and [1, 0, -1]^T for the dy filter.</p>
+
+    <center>
+      <img src="part1/1/part1_1_dx.jpg" width="400px"/>
+      <figcaption>dx
+      </figcaption>
+    </center>
+
+
+
+    <center>
+      <img src="part1/1/part1_1_dy.jpg" width="400px"/>
+      <figcaption>dy
+      </figcaption>
+    </center>
+
     <h3>Part 1.2: Finite Difference Operator</h3>
 
-    I convolve this image of a cameraman to demonstrate edge detection using convolution. I convolve using a basic [1, 0, -1] kernel for the partial derivative of the image wrt x and the transpose of this kernel for the partial derivative wrt y.
+    <p>I convolve this image of a cameraman to demonstrate edge detection using convolution. I convolve using a basic [1, 0, -1] kernel for the partial derivative of the image wrt x and the transpose of this kernel for the partial derivative wrt y.</p>
 
     <center>
       <img src="part1/2/cameraman.png" width="300px"/>
@@ -205,7 +237,7 @@
 			  </table>
 		</div>
 
-    The binarized gradient here has a cutoff of 30. We can observe that all of these post-filter results look much smoother and much of the noise in the grass is eliminated. This has the tradeoff though of making the background buildings less visible as well. Since a lot of the noise is gone, I'm able to choose a lower binarization threshold. Additionally, a lot of the existing edges in the gradient images are smoother after filtering.
+    <p>The binarized gradient here has a cutoff of 30. We can observe that all of these post-filter results look much smoother and much of the noise in the grass is eliminated. This has the tradeoff though of making the background buildings less visible as well. Since a lot of the noise is gone, I'm able to choose a lower binarization threshold. Additionally, a lot of the existing edges in the gradient images are smoother after filtering.</p>
 
     <p>Since convolution is associative and commutative, we can do the same thing by convolving the dx and dy filters with the Gaussian filter in advance to get derivative of Gaussian filters. So, instead of convolving twice (Gaussian then derivatives or vice-versa), we can convolve once (derivative of Gaussian only).</p>
 
@@ -226,7 +258,7 @@
 			  </table>
 		</div>
 
-    Demonstrating that this is the same, here are identical results (with the same binarization cutoff as well).
+    <p>Demonstrating that this is the same, here are identical results (with the same binarization cutoff as well).</p>
 
     <div style="display: flex; flex-direction: column; align-items: center;">
 			<table style="width: 100%; text-align: center; border-collapse: collapse;">
@@ -356,6 +388,24 @@
 				  </tr>
 			  </table>
 		</div>
+
+    <p>Here I try using the sharpening filter on a blurred image to try and undo the blurring effect. It doesn't work very well since the high frequencies that the filter would amplify are not present in the blurred (low-passed) image.</p>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
+      <table style="width: 100%; text-align: center; border-collapse: collapse;">
+        <tr>
+          <td style="text-align: center;">
+            <img src="part2/1/apes_blur.jpg" width="300px"/>
+            <figcaption>blurred image          <td style="text-align: center;">
+            <img src="part2/1/apes_blur_sharpen.jpg" width="300px"/>
+            <figcaption>unblur attempt using sharpening filter
+            </figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center;">
 
     <h3>Part 2.2: Hybrid Images</h3>
 
@@ -822,7 +872,7 @@
     
     <h3>Part 2.4: Multiresolution Blending</h3>
 
-    I show the further application of the stacks to creating two further pictures.
+    I show the further application of the stacks to creating some further pictures. Two use a custom mask and the rest use a standard half-half mask.
 
     <h4>winter and autumn road</h4>
 
