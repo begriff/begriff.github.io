@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+  <title>Project 3</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    h1 {
+      text-align: center;
+    }
+
+    .container {
+      margin: 0 auto;
+      padding: 60px 20%;
+    }
+
+    figure {
+      text-align: center;
+    }
+
+    img {
+      display: inline-block;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .dropdown {
+      margin: 20px 0;
+    }
+
+    .dropdown-header {
+      background-color: #f1f1f1;
+      padding: 15px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dropdown-header:hover {
+      background-color: #e9e9e9;
+    }
+
+    .dropdown-content {
+      display: none;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+    }
+
+    .dropdown-content.show {
+      display: block;
+    }
+
+    .arrow {
+      transition: transform 0.3s ease;
+    }
+
+    .arrow.rotated {
+      transform: rotate(180deg);
+    }
+
+    img {image-rendering: pixelated;
+    image-rendering: crisp-edges; /* older syntax, fallback */
+    }
+
+    table {
+      margin: 0 auto;
+    }
+
+    table td {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+    <h1>Stitching Photo Mosaics: Image Warping and Mosaicing (Project 3A)</h1>
+    <h3>Overview</h3>
+    <p>In this project I demonstrate the use of homographies to warp images. Using homographies, we can rectify shapes in images and produce panorama mosaics.
+    </p>
+
+    <h2>A.1: Shoot the Pictures</h2>
+
+	<p>I shot three sets of three photos in the Berkeley Rose Garden and at the park across the street. In each set, the photos differ only by a perspective transform.</p>
+
+	<h3>Rose Garden Bottom Set</h3>
+	<figure>
+		<img src="photos/rosegarden_bottom/0.jpg" alt="Rose Garden Bottom 0" width="300">
+		<img src="photos/rosegarden_bottom/1.jpg" alt="Rose Garden Bottom 1" width="300">
+		<img src="photos/rosegarden_bottom/2.jpg" alt="Rose Garden Bottom 2" width="300">
+		<figcaption>Three photos from the bottom area of the Rose Garden</figcaption>
+	</figure>
+
+	<h3>Rose Garden Top Set</h3>
+	<figure>
+		<img src="photos/rosegarden_top/0.jpg" alt="Rose Garden Top 0" width="300">
+		<img src="photos/rosegarden_top/1.jpg" alt="Rose Garden Top 1" width="300">
+		<img src="photos/rosegarden_top/2.jpg" alt="Rose Garden Top 2" width="300">
+		<figcaption>Three photos from the top area of the Rose Garden</figcaption>
+	</figure>	
+
+	<h3>Park Tables</h3>
+	<figure>
+		<img src="photos/park/0.jpg" alt="Park" width="300">
+		<img src="photos/park/1.jpg" alt="Park" width="300">
+		<img src="photos/park/2.jpg" alt="Park" width="300">
+		<figcaption>Three photos from the top area of the Rose Garden</figcaption>
+	</figure>
+
+	<h2>A.2: Recover Homographies</h2>
+
+	<p>A perspective transform (homography) is described by a 3x3 matrix H mapping point b in the image to be warped to point a in the reference image. Note that we add a 1 to a and b to make them homogeneous coordinates.</p>
+
+	<figure>
+		<img src="math/h0.png" width="200">
+	</figure>
+
+	<p>There are 8 degrees of freedom in a homography (intuitively imagine 4 corners of an image and 4 corners to warp to, 4 + 4 = 8), so we write H as follows:</p>
+
+	<figure>
+		<img src="math/h1.png" width="200">
+	</figure>
+
+	Expanding a and b out, we have:
+
+	<figure>
+		<img src="math/h2.png" width="200">
+	</figure>
+
+	<p>The bottom-right entry is left as 1 since it is just a scaling factor that affects the bottom element of a. We divide this out anyways to convert back to regular coordinates.</p>
+
+	<p>The system of equations represented by this matrix is as follows:</p>
+
+	<figure>
+		<img src="math/h3.png" width="200">
+	</figure>
+
+	<p>After substituting lambda and isolating u and v, the transformed coordinates, we get this:</p>
+
+	<figure>
+		<img src="math/h4.png" width="200">
+	</figure>
+
+	<p>After multipliying the denominator out, we get this</p>
+
+	<figure>
+		<img src="math/h5.png" width="200">
+	</figure>
+
+	<p>and again isolate u and v to obtain this</p>
+
+	<figure>
+		<img src="math/h6.png" width="200">
+	</figure>
+
+	<p>Note that we can convert this system of equations back into matrix form:</p>
+
+	<figure>
+		<img src="math/h7.png" width="200">
+	</figure>
+
+	<p>Now, this problem can be framed as a linear regression in which we are aiming to solve for 8 parameters in the big column vector above. In my code, I use np.linalg.lstsq to solve for the parameters. After finding the optimal parameters, we plug them back into our 3x3 matrix to obtain our homgoraphy H.</p>
+		
+	<p>For each additional pair of points, we can add another column with u_2 and v_2 and copy the 2 rows on the other side down.</p>
+
+	<figure>
+		<img src="math/h8.png" width="300">
+	</figure>
+
+	<p>Applying this to a pair in the first set of photos, I pick out point correspondences as follows:</p>
+
+	<figure>
+		<img src="photos/rosegarden_bottom/pts_0.jpg" width="300">
+		<figcaption>reference image</figcaption>
+		<img src="photos/rosegarden_bottom/pts_1.jpg" width="300">
+		<figcaption>image to warp</figcaption>
+	</figure>
+
+	For this pair, I compute this H for mapping the points in the second image to the first image:
+
+	<figure>
+		<img src="photos/rosegarden_bottom/H.png" width="300">
+	</figure>
+
+	Doing the same for the second set of photos:
+
+	<figure>
+		<img src="photos/rosegarden_top/pts_0.jpg" width="300">
+		<figcaption>reference image</figcaption>
+		<img src="photos/rosegarden_top/pts_1.jpg" width="300">
+		<figcaption>image to warp</figcaption>
+	</figure>
+
+	<p>For this pair, I compute the following H:</p>
+
+	<figure>
+		<img src="photos/rosegarden_top/H.png" width="300">
+	</figure>
+
+	<h2>A.3: Warp the Images</h2>
+
+	<p>Using homographies, we can perform image rectification to take warp rectangles viewed at an angle to rectangles viewed from the front. To sample each pixel in the output rectified image, we compute the inverse homography H^-1 and use the transformed coordinates to sample from the untransformed source image. I implement two ways to sample from the source image: nearest neighbor and bilinear interpolation.</p>
+
+	<p>I took these two photos with a rectangle viewed at an angle to transform.</p>
+
+	<figure>
+		<img src="photos/rectify/i_love_cs180.jpg" width="300">
+		<figcaption>I <3 CS180</figcaption>
+		<img src="photos/rectify/numthy.jpg" width="300">
+		<figcaption>number theory chalkboard I captured at an angle</figcaption>
+	</figure>
+
+	<p>I compute homographies for both images mapping the portion to rectify to the output plane. Using the inverse homography and cropping, I obtain the following rectified images:</p>
+
+	<table>
+		<tr>
+			<td>
+				<img src="photos/rectify/i_love_cs180_rectified_nn.jpg" width="300">
+				<figcaption>nearest neighbor</figcaption>
+			</td>
+			<td>
+				<img src="photos/rectify/i_love_cs180_rectified_bilinear.jpg" width="300">
+				<figcaption>bilinear interpolation</figcaption>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<img src="photos/rectify/numthy_rectified_nn.jpg" width="300">
+				<figcaption>nearest neighbor</figcaption>
+			</td>
+			<td>
+				<img src="photos/rectify/numthy_rectified_bilinear.jpg" width="300">
+				<figcaption>bilinear interpolation</figcaption>
+			</td>
+		</tr>
+	</table>
+
+	<p>The advantage of bilinear interpolation is subtle but noticeable. Jagged edges on the lines are smoothed out in both images after bilinear interpolation.</p>
+
+	<h2>A.4: Blend the Images into a Mosaic</h2>
+
+	<p>I use the images from the sets in A.1 to create a mosaics. For each set, I choose the middle image as a reference image. For the other images, I choose point correspondences between them and the reference. Then, I calculate the homography that maps each image to the reference. Using the inverse homography matrices, I am able to map pixel coordinates on the output image to pixel coordinates on the source image. I then either using nearest neighbor or bilinear interpolation to sample from the source image and place the pixel in the output image.</p>
+
+	<p>An issue with just doing this is that there may be pixels on the output which correpsond to multiple source images. Rather, there necessarily must be since we define our correspondences by takinga advantage of this overlap between images. Just overwriting one warped image with another is a bad idea since it leads to hard edge artifacts. In order to combat this, I used cv2.distanceTransform to generate an alpha mask for each image. The input to the distance transform is an all-ones array the same size as each image, but with all the edges set to 0. This way, each pixel on the alpha mask is the distance from the edge of the image, and thus is a value between 0 and 1. I then use the alpha mask values as weights for computing weighted averages of the samples from each image when blending the images together.</p>
+
+	<h3>Mosaic Results</h3>
+
+	<p>Below are the results for all three photo sets, showing the effects of different interpolation methods and blending techniques:</p>
+
+	<h4>Park Tables Mosaic</h4>
+	<table>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/park_mosaic_nn_no_blend.jpg" width="400">
+				<figcaption>Nearest Neighbor, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/park_mosaic_nn.jpg" width="400">
+				<figcaption>Nearest Neighbor, With Blending</figcaption>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/park_mosaic_bilinear_no_blend.jpg" width="400">
+				<figcaption>Bilinear Interpolation, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/park_mosaic_bilinear.jpg" width="400">
+				<figcaption>Bilinear Interpolation, With Blending</figcaption>
+			</td>
+		</tr>
+	</table>
+
+	<h4>Rose Garden Bottom Mosaic</h4>
+	<table>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_bottom_mosaic_nn_no_blend.jpg" width="400">
+				<figcaption>Nearest Neighbor, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_bottom_mosaic_nn.jpg" width="400">
+				<figcaption>Nearest Neighbor, With Blending</figcaption>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_bottom_mosaic_bilinear_no_blend.jpg" width="400">
+				<figcaption>Bilinear Interpolation, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_bottom_mosaic_bilinear.jpg" width="400">
+				<figcaption>Bilinear Interpolation, With Blending</figcaption>
+			</td>
+		</tr>
+	</table>
+
+	<h4>Rose Garden Top Mosaic</h4>
+	<table>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_top_mosaic_nn_no_blend.jpg" width="400">
+				<figcaption>Nearest Neighbor, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_top_mosaic_nn.jpg" width="400">
+				<figcaption>Nearest Neighbor, With Blending</figcaption>
+			</td>
+		</tr>
+		<tr>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_top_mosaic_bilinear_no_blend.jpg" width="400">
+				<figcaption>Bilinear Interpolation, No Blending</figcaption>
+			</td>
+			<td>
+				<img src="photos/mosaic_out/rosegarden_top_mosaic_bilinear.jpg" width="400">
+				<figcaption>Bilinear Interpolation, With Blending</figcaption>
+			</td>
+		</tr>
+	</table>
+
+	<p>Some blur is visible in the blended images due to my hand movement affecting the center of projection.</p>
+
+</body>
+</html>
