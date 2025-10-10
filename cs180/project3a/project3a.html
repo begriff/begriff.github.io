@@ -87,7 +87,7 @@
 
     <h2>A.1: Shoot the Pictures</h2>
 
-	<p>I shot three sets of three photos in the Berkeley Rose Garden and at the park across the street. In each set, the photos differ only by a perspective transform.</p>
+	<p>I shot three sets of three photos in the Berkeley Rose Garden and at the park across the street. In each set, the photos differ only by a perspective transform. That is to say, they have a (roughly) fixed center of projection and only differ by the angle of the camera.</p>
 
 	<h3>Rose Garden Bottom Set</h3>
 	<figure>
@@ -110,7 +110,7 @@
 		<img src="photos/park/0.jpg" alt="Park" width="300">
 		<img src="photos/park/1.jpg" alt="Park" width="300">
 		<img src="photos/park/2.jpg" alt="Park" width="300">
-		<figcaption>Three photos from the top area of the Rose Garden</figcaption>
+		<figcaption>Park tables across the street from the Rose Garden</figcaption>
 	</figure>
 
 	<h2>A.2: Recover Homographies</h2>
@@ -207,6 +207,16 @@
 
 	<p>Using homographies, we can perform image rectification to take warp rectangles viewed at an angle to rectangles viewed from the front. To sample each pixel in the output rectified image, we compute the inverse homography H^-1 and use the transformed coordinates to sample from the untransformed source image. I implement two ways to sample from the source image: nearest neighbor and bilinear interpolation.</p>
 
+	<p>Nearest neighbor sampling just rounds the transformed coordinates to integer values and samples from the source image at those coordinates.</p>
+
+	<p>Bilinear interpolation samples by using the transformed coordinates to calculate a weighted average of the 4 closest pixels to determine the value of the pixel in the output image. The weights are determined by the distance from the transformed coordinates to the surrounding pixels. I calculate a weighted average in the y-direction to get 2 average values, and then average these two values in the x-direction to get the final value.</p>
+
+	<p>To show bilinear interpolation visually, I borrow this slide from CS184:</p>
+
+	<figure>
+		<img src="photos/bilinear_slide.png" width="400">
+	</figure>
+
 	<p>I took these two photos with a rectangle viewed at an angle to transform.</p>
 
 	<figure>
@@ -241,13 +251,35 @@
 		</tr>
 	</table>
 
-	<p>The advantage of bilinear interpolation is subtle but noticeable. Jagged edges on the lines are smoothed out in both images after bilinear interpolation.</p>
+	<p>The advantage of bilinear interpolation is subtle but noticeable. Jagged edges on the lines are smoothed out in both images after bilinear interpolation. On the left picture, observe my writing, the lines going across the page, and the edges of the paper as being smoother after bilinear interpolation. On the right picture, the smoothing effect is visible on the chalk writing.</p>
+
+	<p>Bilinear interpolation is much more computationally expensive than nearest neighbor since it requires sampling from 4 pixels, and calculating 2 weighted averages (hence bilinear).</p>
+
+	<p>The top-left image took 0.51 seconds to rectify and the top-right took 1.41 seconds. The bottom-left took 4.47 seconds and the bottom-right took 11.60 seconds.</p>
 
 	<h2>A.4: Blend the Images into a Mosaic</h2>
 
-	<p>I use the images from the sets in A.1 to create a mosaics. For each set, I choose the middle image as a reference image. For the other images, I choose point correspondences between them and the reference. Then, I calculate the homography that maps each image to the reference. Using the inverse homography matrices, I am able to map pixel coordinates on the output image to pixel coordinates on the source image. I then either using nearest neighbor or bilinear interpolation to sample from the source image and place the pixel in the output image.</p>
+	<p>I use the images from the sets in A.1 to create a mosaics. For each set, I choose the middle image as a reference image. For the other images, I choose point correspondences between them and the reference. Then, I calculate the homography that maps each image to the reference using the procedure described above. Using the inverse homography matrices, I am able to map pixel coordinates on the output image to pixel coordinates on the source image.</p>
 
-	<p>An issue with just doing this is that there may be pixels on the output which correpsond to multiple source images. Rather, there necessarily must be since we define our correspondences by takinga advantage of this overlap between images. Just overwriting one warped image with another is a bad idea since it leads to hard edge artifacts. In order to combat this, I used cv2.distanceTransform to generate an alpha mask for each image. The input to the distance transform is an all-ones array the same size as each image, but with all the edges set to 0. This way, each pixel on the alpha mask is the distance from the edge of the image, and thus is a value between 0 and 1. I then use the alpha mask values as weights for computing weighted averages of the samples from each image when blending the images together.</p>
+	<p>Before I sample, I figure out the dimensions of the output image by simply taking the min and max of the x and y coordinates of the coordinates of all the warped image corners. I then create a blank output image with size determined by the difference between the max and min coordinates. I additionally use the min x and y to compute a translation vector since (0, 0) on the output image does not necessarily correspond to (0, 0) on the reference image.</p>
+
+	<p>For each image, I create its own blank output image just for storing image-specific warped pixels for putting it all together later. I then iterate over each pixel in the output image and use the inverse homography to map the pixel coordinates to the source image. I either use nearest neighbor or bilinear interpolation as described above in A.3 and obtain a sample of the source image at the transformed coordinates. I then place the pixel in the output image.</p>
+
+	<p>After this, I have a set of per-image outputs to combine. The issue that needs to be handled is that there may be pixels on the final output which correpsond to multiple source images. In fact, there necessarily must be since we define our correspondences by takinga advantage of this overlap between images. Just overwriting one warped image with another is a bad idea since it leads to hard edge artifacts.</p>
+
+	<p>In order to combat this, I used cv2.distanceTransform to generate an alpha mask for each image for use in blending. The input to the distance transform is an all-ones array the same size as each image, but with all the edges set to 0. This way, each pixel on the alpha mask is the distance from the edge of the image. I then use the alpha mask values as weights for computing weighted averages of the samples from each image when blending the images together. So, if a transformed pixel is 1 away from the edge of its warped image, it will be weighted and there is a competing pixel from another image 3 away from the edge of its warped image, the first one will be given 25% influence on the average and the second one will be given 75% influence on the average. Note that division by zero needs to be handled by returning 0 in that case.</p>
+
+	<p>Here's a visual example of the alpha mask generation:</p>
+
+	<figure>
+		<img src="photos/distance_transform/distance_transform_ex.jpg" width="300">
+		<figcaption>alpha mask before transformation (notice black edges)</figcaption>
+	</figure>
+
+	<figure>
+		<img src="photos/distance_transform/distance_transform_ex_transformed.jpg" width="300">
+		<figcaption>alpha mask after distance transform</figcaption>
+	</figure>
 
 	<h3>Mosaic Results</h3>
 
