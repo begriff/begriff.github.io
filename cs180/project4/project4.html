@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+  <title>Neural Radiance Fields</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      min-height: 100vh;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .page-wrapper {
+      background: white;
+      margin: 0 auto;
+      max-width: 1200px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      color: #ffffff;
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.5em;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 1.2em;
+      font-weight: 300;
+      opacity: 0.95;
+    }
+
+    .container {
+      padding: 40px;
+    }
+
+    .overview {
+      background: #f8f9fa;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border-left: 4px solid #000000;
+    }
+
+    .overview h3 {
+      margin-top: 0;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    figure {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    img {
+      display: inline-block;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .section-expander {
+      margin: 30px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .section-expander:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .section-header {
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      color: white;
+      padding: 20px 25px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.3em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+
+    .section-header:hover {
+      background: linear-gradient(135deg, #1a1a1a 0%, #e0e0e0 100%);
+    }
+
+    .section-content {
+      display: none;
+      padding: 30px;
+      background: white;
+      animation: slideDown 0.3s ease;
+    }
+
+    .section-content.show {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .arrow {
+      transition: transform 0.3s ease;
+      font-size: 1.2em;
+    }
+
+    .arrow.rotated {
+      transform: rotate(180deg);
+    }
+
+    h2 {
+      color: #000000;
+      font-weight: 600;
+      margin-top: 30px;
+      margin-bottom: 20px;
+      font-size: 1.8em;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 10px;
+    }
+
+    h3 {
+      color: #333333;
+      font-weight: 600;
+      margin-top: 25px;
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+
+    h4 {
+      color: #555;
+      font-weight: 600;
+      margin-top: 20px;
+      margin-bottom: 12px;
+      font-size: 1.2em;
+    }
+
+    h5 {
+      color: #666;
+      font-weight: 600;
+      margin-top: 18px;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+
+    p {
+      margin: 15px 0;
+      color: #444;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #e83e8c;
+      font-size: 0.9em;
+    }
+
+    ul {
+      margin: 15px 0;
+      padding-left: 25px;
+    }
+
+    li {
+      margin: 8px 0;
+      color: #444;
+    }
+
+    img {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    table td {
+      text-align: center;
+      padding: 15px;
+    }
+
+    .progression-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+
+    .progression-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 10px;
+      min-width: 280px;
+    }
+
+    .progression-column h4 {
+      margin-top: 0;
+      color: #000000;
+    }
+
+    .progression-column figure {
+      margin: 0 0 15px 0;
+      text-align: center;
+    }
+
+    .progression-column img {
+      display: block;
+      margin-bottom: 10px;
+      height: auto;
+    }
+
+    .progression-column .progression-img {
+      width: 250px;
+      height: 250px;
+      object-fit: contain;
+    }
+
+    figcaption {
+      margin-top: 8px;
+      color: #666;
+      font-size: 0.9em;
+      font-style: italic;
+    }
+
+    .subsection {
+      margin: 25px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 3px solid #000000;
+    }
+
+    .image-sequence-expander {
+      margin: 25px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .image-sequence-expander:hover {
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .image-sequence-header {
+      background: linear-gradient(135deg, #ffffff 0%, #000000 100%);
+      color: white;
+      padding: 15px 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.1em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s ease;
+      user-select: none;
+    }
+
+    .image-sequence-header:hover {
+      background: linear-gradient(135deg, #e0e0e0 0%, #1a1a1a 100%);
+    }
+
+    .image-sequence-content {
+      display: none;
+      padding: 20px;
+      background: #fafafa;
+      animation: slideDown 0.3s ease;
+    }
+
+    .image-sequence-content.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="header">
+      <h1>Neural Radiance Fields</h1>
+      <div class="subtitle">3D Scene Reconstruction from 2D Images</div>
+    </div>
+    
+    <div class="container">
+      <div class="overview">
+        <h3>Overview</h3>
+        <p>I implement Neural Radiance Fields (NeRFs) to create 3D scenes from 2D images taken from various positions. This project explores the intersection of computer vision, deep learning, and 3D graphics to reconstruct photorealistic scenes using neural networks.</p>
+      </div>
+
+      <div class="section-expander">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>Camera Calibration and 3D Scanning</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="section-content">
+          <p>I scanned the Mcdonalds Hamburglar character for my NeRF scene. Here are two screenshots of the camera frustums in Viser.</p>
+
+          <figure>
+            <img src="part0/part_0_1.png" width="450">
+          </figure>
+          
+          <figure>
+            <img src="part0/part_0_2.png" width="450">
+          </figure>
+        </div>
+      </div>
+
+      <div class="section-expander">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>Fitting a Neural Field to a 2D Image</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="section-content">
+          <p>As a precursor to training a NeRF proper, I first fit models to 2D images. I fit a model to both the required fox image and also this anthropomorphic peach.</p>
+
+          <figure>
+            <img src="part1/fox.jpg" alt="Fox" width="450">
+            <figcaption>Fox</figcaption>
+          </figure>
+          
+          <figure>
+            <img src="part1/peach.jpg" alt="Peach" width="450">
+            <figcaption>Peach</figcaption>
+          </figure>
+          
+          <h3>Model Architecture</h3>
+
+          <p>My model architecture is as follows:</p>
+
+          <ul>
+            <li>Positional encoding</li>
+            <li>Linear (64)</li>
+            <li>ReLU</li>
+            <li>Linear (64)</li>
+            <li>ReLU</li>
+            <li>Linear (64)</li>
+            <li>ReLU</li>
+            <li>Linear (3)</li>
+            <li>Sigmoid</li>
+          </ul>
+
+          <p>It is a simple MLP with 2 hidden layers of 64 units each. The output layer is a linear layer with 3 units and a sigmoid activation function to ensure the output is between 0 and 1. Positional encoding is added to make the model more robust to high-frequency changes.</p>
+          
+          <p>I use a learning rate of 0.01, a batch size of 10000, and train for 1000 epochs. I made a version that used a torch-style dataloader, but found that this was making training unnecessarily slow, so I ended up just keeping the whole training image on the GPU.</p>
+
+          <h3>Training Progression</h3>
+
+          <p>Here are the training progressions for both the fox and peach images (each with L = 10 and W = 64):</p>
+
+          <div class="progression-container">
+            <div class="progression-column">
+              <h4>Fox Training Progression</h4>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_0.jpg" alt="Fox epoch 0" class="progression-img">
+                <figcaption>Epoch 0</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_2.jpg" alt="Fox epoch 2" class="progression-img">
+                <figcaption>Epoch 2</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_4.jpg" alt="Fox epoch 4" class="progression-img">
+                <figcaption>Epoch 4</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_6.jpg" alt="Fox epoch 6" class="progression-img">
+                <figcaption>Epoch 6</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_8.jpg" alt="Fox epoch 8" class="progression-img">
+                <figcaption>Epoch 8</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_L10_W_64_final.jpg" alt="Fox final" class="progression-img">
+                <figcaption>Final</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/fox_10_64_prog/fox_10_64_psnr.png" alt="Fox PSNR curve" width="400">
+                <img src="part1/fox_10_64_prog/fox_10_64_training_loss.png" alt="Fox training loss" width="400">
+                <figcaption>Fox PSNR curve and training loss</figcaption>
+              </figure>
+            </div>
+            <div class="progression-column">
+              <h4>Peach Training Progression</h4>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_0.jpg" alt="Peach epoch 0" class="progression-img">
+                <figcaption>Epoch 0</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_2.jpg" alt="Peach epoch 2" class="progression-img">
+                <figcaption>Epoch 2</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_4.jpg" alt="Peach epoch 4" class="progression-img">
+                <figcaption>Epoch 4</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_6.jpg" alt="Peach epoch 6" class="progression-img">
+                <figcaption>Epoch 6</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_8.jpg" alt="Peach epoch 8" class="progression-img">
+                <figcaption>Epoch 8</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_L10_W_64_final.jpg" alt="Peach final" class="progression-img">
+                <figcaption>Final</figcaption>
+              </figure>
+              <figure>
+                <img src="part1/peach_10_64_prog/peach_10_64_psnr.png" alt="Peach PSNR curve" width="400">
+                <img src="part1/peach_10_64_prog/peach_10_64_training_loss.png" alt="Peach training loss" width="400">
+                <figcaption>Peach PSNR curve and training loss</figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <h3>Hyperparameter experiments</h3>
+
+          <p>Here are some comparisons of what adjusting the degree of the positional encoding (L) and the layer width (W) does.</p>
+
+          <h4>Fox Hyperparameter Comparison</h4>
+          <table>
+            <tr>
+              <td>
+                <figure>
+                  <img src="part1/2x2_fox/fox_L2_W_16_final.jpg" alt="Fox L2 W16" width="300">
+                  <figcaption>L=2, W=16</figcaption>
+                </figure>
+              </td>
+              <td>
+                <figure>
+                  <img src="part1/2x2_fox/fox_L2_W_128_final.jpg" alt="Fox L2 W128" width="300">
+                  <figcaption>L=2, W=128</figcaption>
+                </figure>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <figure>
+                  <img src="part1/2x2_fox/fox_L20_W_16_final.jpg" alt="Fox L20 W16" width="300">
+                  <figcaption>L=20, W=16</figcaption>
+                </figure>
+              </td>
+              <td>
+                <figure>
+                  <img src="part1/2x2_fox/fox_L20_W_128_final.jpg" alt="Fox L20 W128" width="300">
+                  <figcaption>L=20, W=128</figcaption>
+                </figure>
+              </td>
+            </tr>
+          </table>
+
+          <h4>Peach Hyperparameter Comparison</h4>
+          <table>
+            <tr>
+              <td>
+                <figure>
+                  <img src="part1/2x2_peach/peach_L2_W_16_final.jpg" alt="Peach L2 W16" width="300">
+                  <figcaption>L=2, W=16</figcaption>
+                </figure>
+              </td>
+              <td>
+                <figure>
+                  <img src="part1/2x2_peach/peach_L2_W_128_final.jpg" alt="Peach L2 W128" width="300">
+                  <figcaption>L=2, W=128</figcaption>
+                </figure>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <figure>
+                  <img src="part1/2x2_peach/peach_L20_W_16_final.jpg" alt="Peach L20 W16" width="300">
+                  <figcaption>L=20, W=16</figcaption>
+                </figure>
+              </td>
+              <td>
+                <figure>
+                  <img src="part1/2x2_peach/peach_L20_W_128_final.jpg" alt="Peach L20 W128" width="300">
+                  <figcaption>L=20, W=128</figcaption>
+                </figure>
+              </td>
+            </tr>
+          </table>
+
+          <p>Observe that small values of L lead to only low frequencies being captured. Small values of W cause strange line artifacts.</p>
+        </div>
+      </div>
+
+      <div class="section-expander">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>Fitting a Neural Radiance Field to Multi-View Images</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="section-content">
+          <h3>Implementation Details</h3>
+
+          <h4>Creating Rays from Cameras</h4>
+
+          <p>I implement three functions using batched torch operations: <code>transform(c2w, x_c)</code>,
+            <code>pixel_to_camera(K, uv, s)</code>,
+            and <code>pixel_to_ray(K, c2w, uv)</code></p>
+
+          <p><code>transform(c2w, x_c)</code> is implemented using a simple conversion of <code>x_c</code>to homogeneous coordinates, a matrix multiplication, and a conversion from homogeneous coordinates.</p>
+
+          <p><code>pixel_to_camera(K, uv, s)</code> is implemented by converting pixel coordinates to homogeneous coordinates and applying the inverse of the intrinsics matrix K.</p>
+
+          <p><code>pixel_to_ray(K, c2w, uv)</code> is implemented by using the second function to get the camera coordinates of the pixel, and then using the first function to convert them to world coordinates. I construct the ray via vector subtraction on the world coordinates and the camera coordinates, making sure to normalize the direction vector.</p>
+
+          <h4>Sampling</h4>
+
+          <p>To determine the color of a pixel, we need to sample the camera ray that corresponds to the pixel. The final color is determined by sampling along this ray and aggregating the samples using the discrete approximation of the volume rendering equation, which I implement later. I simply use the linspace function to get n evenly spaced samples, and add some noise during training to prevent overfitting.</p>
+
+          <h4>Dataloader</h4>
+
+          <p>I made a custom dataloader not following torch conventions. It has one function <code>sample_rays(self, n)</code> that samples n random pixels from across the dataset and their corresponding rays.</p>
+
+          <h4>Neural Radiance Field Model</h4>
+
+          <p>I followed the provided diagram's architecture for the NeRF model. I made a separate <code>NeRFModel</code> class to contain the model for easy import.</p>
+
+          <figure>
+            <img src="part2/mlp_nerf.png" width="600">
+            <figcaption>NeRF Model Architecture</figcaption>
+          </figure>
+
+          <h4>Volume Rendering</h4>
+
+          <p>I created a function <code>volrend(sigmas, rgbs, step_size)</code> that handles the volume rendering process. It produces a discrete approximation of using discrete steps. I implemented it using batched torch operations.</p>
+
+          <figure>
+            <img src="part2/equation.png" width="600">
+            <figcaption>Volume Rendering Equation</figcaption>
+          </figure>
+
+          <h3>Visualization of rays and samples with cameras</h3>
+
+          <p>Here is a visualization of how points are sampled along the sampled rays.</p>
+
+          <figure>
+            <img src="part2/part_2_vis.png" width="450">
+            <figcaption>Rays and samples</figcaption>
+          </figure>
+
+          <h4>Training progression visualization with predicted images across iterations</h4>
+
+          <p>Below are the ground truth validation images alongside their corresponding predicted images at different training steps.</p>
+
+          <div class="image-sequence-expander">
+            <div class="image-sequence-header" onclick="toggleImageSequence(this)">
+              <span>View All Validation Image Progressions (10 images × 7 steps each)</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="image-sequence-content">
+              <div class="progression-container">
+            <div class="progression-column">
+              <h4>Validation Image 0</h4>
+              <figure>
+				<img src="part2/validation_gt/0_rgb.jpg" alt="Ground truth 0" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_000100_psnr_14.64.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.64)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_000200_psnr_13.99.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 13.99)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_000300_psnr_14.37.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.37)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_000400_psnr_14.61.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 14.61)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_000500_psnr_14.65.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 14.65)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/0/val0_step_010000_psnr_14.59.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 14.59)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 1</h4>
+			<figure>
+				<img src="part2/validation_gt/1_rgb.jpg" alt="Ground truth 1" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_000100_psnr_12.89.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 12.89)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_000200_psnr_13.40.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 13.40)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_000300_psnr_13.34.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 13.34)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_000400_psnr_13.58.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 13.58)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_000500_psnr_13.47.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 13.47)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/1/val1_step_010000_psnr_13.23.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 13.23)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 2</h4>
+			<figure>
+				<img src="part2/validation_gt/2_rgb.jpg" alt="Ground truth 2" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_000100_psnr_14.26.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.26)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_000200_psnr_14.36.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 14.36)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_000300_psnr_14.77.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.77)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_000400_psnr_14.97.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 14.97)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_000500_psnr_15.04.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 15.04)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/2/val2_step_010000_psnr_15.07.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 15.07)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 3</h4>
+			<figure>
+				<img src="part2/validation_gt/3_rgb.jpg" alt="Ground truth 3" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_000100_psnr_14.59.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.59)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_000200_psnr_14.59.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 14.59)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_000300_psnr_14.81.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.81)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_000400_psnr_15.01.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 15.01)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_000500_psnr_15.08.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 15.08)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/3/val3_step_010000_psnr_15.21.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 15.21)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 4</h4>
+			<figure>
+				<img src="part2/validation_gt/4_rgb.jpg" alt="Ground truth 4" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_000100_psnr_16.19.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 16.19)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_000200_psnr_16.27.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 16.27)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_000300_psnr_17.02.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 17.02)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_000400_psnr_17.47.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 17.47)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_000500_psnr_17.82.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 17.82)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/4/val4_step_010000_psnr_18.30.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 18.30)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 5</h4>
+			<figure>
+				<img src="part2/validation_gt/5_rgb.jpg" alt="Ground truth 5" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_000100_psnr_17.46.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 17.46)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_000200_psnr_17.91.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 17.91)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_000300_psnr_18.47.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 18.47)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_000400_psnr_18.91.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 18.91)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_000500_psnr_19.31.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 19.31)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/5/val5_step_010000_psnr_19.92.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 19.92)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 6</h4>
+			<figure>
+				<img src="part2/validation_gt/6_rgb.jpg" alt="Ground truth 6" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_000100_psnr_18.75.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 18.75)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_000200_psnr_18.72.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 18.72)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_000300_psnr_19.48.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 19.48)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_000400_psnr_19.75.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 19.75)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_000500_psnr_19.98.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 19.98)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/6/val6_step_010000_psnr_20.24.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 20.24)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 7</h4>
+			<figure>
+				<img src="part2/validation_gt/7_rgb.jpg" alt="Ground truth 7" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_000100_psnr_14.27.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.27)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_000200_psnr_13.68.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 13.68)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_000300_psnr_14.06.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.06)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_000400_psnr_14.32.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 14.32)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_000500_psnr_14.36.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 14.36)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/7/val7_step_010000_psnr_14.30.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 14.30)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 8</h4>
+			<figure>
+				<img src="part2/validation_gt/8_rgb.jpg" alt="Ground truth 8" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_000100_psnr_14.76.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.76)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_000200_psnr_14.63.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 14.63)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_000300_psnr_14.95.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.95)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_000400_psnr_15.20.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 15.20)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_000500_psnr_15.31.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 15.31)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/8/val8_step_010000_psnr_15.43.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 15.43)</figcaption>
+			</figure>
+		</div>
+		<div class="progression-column">
+			<h4>Validation Image 9</h4>
+			<figure>
+				<img src="part2/validation_gt/9_rgb.jpg" alt="Ground truth 9" class="progression-img">
+				<figcaption>Ground Truth</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_000100_psnr_14.34.png" alt="Step 100" class="progression-img">
+				<figcaption>Step 100 (PSNR: 14.34)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_000200_psnr_14.08.png" alt="Step 200" class="progression-img">
+				<figcaption>Step 200 (PSNR: 14.08)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_000300_psnr_14.49.png" alt="Step 300" class="progression-img">
+				<figcaption>Step 300 (PSNR: 14.49)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_000400_psnr_14.69.png" alt="Step 400" class="progression-img">
+				<figcaption>Step 400 (PSNR: 14.69)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_000500_psnr_14.74.png" alt="Step 500" class="progression-img">
+				<figcaption>Step 500 (PSNR: 14.74)</figcaption>
+			</figure>
+			<figure>
+				<img src="part2/validation_prog/9/val9_step_010000_psnr_14.71.png" alt="Step 10000" class="progression-img">
+				<figcaption>Step 10000 (PSNR: 14.71)</figcaption>
+			</figure>
+		</div>
+	</div>
+            </div>
+          </div>
+
+          <h4>PSNR curve on the validation set</h4>
+
+          <figure>
+            <img src="part2/val_psnr_curve.png" width="600">
+            <figcaption>PSNR curve on validation set over training iterations</figcaption>
+          </figure>
+
+          <h4>Spherical rendering video of the Lego using provided test cameras</h4>
+
+          <figure>
+            <img src="part2/lego.gif" width="600">
+            <figcaption>Spherical rendering of the Lego scene</figcaption>
+          </figure>
+        </div>
+      </div>
+
+      <div class="section-expander">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span>Training on the Hamburglar</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="section-content">
+          <p>I made a dataset of photos I took of the McDonalds-Minecraft Hamburglar character and trained a NeRF on it.</p>
+
+          <figure>
+            <img src="part2_6/hamburglar.jpg" width="600">
+            <figcaption>Hamburglar</figcaption>
+          </figure>
+
+          <h4>GIF of camera circling</h4>
+
+          <figure>
+            <img src="part2_6/hamburglar.gif" width="600">
+            <figcaption>Hamburglar</figcaption>
+          </figure>
+
+          <h4>Discussion of code or hyperparameter changes</h4>
+
+          <p>The main changes I made was that I had to change the <code>near</code> and <code>far</code> sampling hyperparameters to 0.02 and 0.5 as suggested in the instructions. This makes sense since the captured scene is small according to the defined scale when making the dataset. Additionally, I sampled 128 points along each ray which helped with the quality of the rendered images. </p>
+
+          <h4>Plot of training loss over iterations</h4>
+
+          <p>Here is a plot of the training loss over iterations, as well as validation loss.</p>
+
+          <figure>
+            <img src="part2_6/train_loss_curve.png" width="600">
+            <figcaption>Training Loss Curve</figcaption>
+          </figure>
+
+          <figure>
+            <img src="part2_6/train_psnr_curve.png" width="600">
+            <figcaption>Training PSNR Curve</figcaption>
+          </figure>
+
+          <figure>
+            <img src="part2_6/val_loss_curve.png" width="600">
+            <figcaption>Validation Loss Curve</figcaption>
+          </figure>
+
+          <figure>
+            <img src="part2_6/val_psnr_curve.png" width="600">
+            <figcaption>Validation PSNR Curve</figcaption>
+          </figure>
+
+          <h4>Intermediate renders of the scene during training</h4>
+
+          <div class="image-sequence-expander">
+            <div class="image-sequence-header" onclick="toggleImageSequence(this)">
+              <span>View All Validation Image Progressions (4 images)</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="image-sequence-content">
+              <h5>Validation Image 0</h5>
+              <figure>
+                <img src="part2_6/progression/validation_gt/0.jpg" width="400">
+                <figcaption>Ground Truth</figcaption>
+              </figure>
+              <div class="progression-container">
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_000200_psnr_14.88.png" class="progression-img">
+                    <figcaption>Step 200 (PSNR: 14.88)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_000400_psnr_16.90.png" class="progression-img">
+                    <figcaption>Step 400 (PSNR: 16.90)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_000600_psnr_17.36.png" class="progression-img">
+                    <figcaption>Step 600 (PSNR: 17.36)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_000800_psnr_18.00.png" class="progression-img">
+                    <figcaption>Step 800 (PSNR: 18.00)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_001000_psnr_18.09.png" class="progression-img">
+                    <figcaption>Step 1000 (PSNR: 18.09)</figcaption>
+                  </figure>
+                </div>
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_001200_psnr_18.29.png" class="progression-img">
+                    <figcaption>Step 1200 (PSNR: 18.29)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_001400_psnr_18.81.png" class="progression-img">
+                    <figcaption>Step 1400 (PSNR: 18.81)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_001600_psnr_18.71.png" class="progression-img">
+                    <figcaption>Step 1600 (PSNR: 18.71)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_001800_psnr_18.74.png" class="progression-img">
+                    <figcaption>Step 1800 (PSNR: 18.74)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/0/val0_step_002000_psnr_18.95.png" class="progression-img">
+                    <figcaption>Step 2000 (PSNR: 18.95)</figcaption>
+                  </figure>
+                </div>
+              </div>
+
+              <h5>Validation Image 1</h5>
+              <figure>
+                <img src="part2_6/progression/validation_gt/1.jpg" width="400">
+                <figcaption>Ground Truth</figcaption>
+              </figure>
+              <div class="progression-container">
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/1/val1_step_000200_psnr_17.33.png" class="progression-img">
+                    <figcaption>Step 200 (PSNR: 17.33)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/1/val1_step_000800_psnr_22.76.png" class="progression-img">
+                    <figcaption>Step 800 (PSNR: 22.76)</figcaption>
+                  </figure>
+                </div>
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/1/val1_step_001400_psnr_23.60.png" class="progression-img">
+                    <figcaption>Step 1400 (PSNR: 23.60)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/1/val1_step_002000_psnr_24.04.png" class="progression-img">
+                    <figcaption>Step 2000 (PSNR: 24.04)</figcaption>
+                  </figure>
+                </div>
+              </div>
+
+              <h5>Validation Image 2</h5>
+              <figure>
+                <img src="part2_6/progression/validation_gt/2.jpg" width="400">
+                <figcaption>Ground Truth</figcaption>
+              </figure>
+              <div class="progression-container">
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/2/val2_step_000200_psnr_17.88.png" class="progression-img">
+                    <figcaption>Step 200 (PSNR: 17.88)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/2/val2_step_000800_psnr_23.21.png" class="progression-img">
+                    <figcaption>Step 800 (PSNR: 23.21)</figcaption>
+                  </figure>
+                </div>
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/2/val2_step_001400_psnr_24.36.png" class="progression-img">
+                    <figcaption>Step 1400 (PSNR: 24.36)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/2/val2_step_002000_psnr_25.13.png" class="progression-img">
+                    <figcaption>Step 2000 (PSNR: 25.13)</figcaption>
+                  </figure>
+                </div>
+              </div>
+
+              <h5>Validation Image 3</h5>
+              <figure>
+                <img src="part2_6/progression/validation_gt/3.jpg" width="400">
+                <figcaption>Ground Truth</figcaption>
+              </figure>
+              <div class="progression-container">
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/3/val3_step_000200_psnr_15.65.png" class="progression-img">
+                    <figcaption>Step 200 (PSNR: 15.65)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/3/val3_step_000800_psnr_19.69.png" class="progression-img">
+                    <figcaption>Step 800 (PSNR: 19.69)</figcaption>
+                  </figure>
+                </div>
+                <div class="progression-column">
+                  <figure>
+                    <img src="part2_6/progression/validation/3/val3_step_001400_psnr_20.76.png" class="progression-img">
+                    <figcaption>Step 1400 (PSNR: 20.76)</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="part2_6/progression/validation/3/val3_step_002000_psnr_20.53.png" class="progression-img">
+                    <figcaption>Step 2000 (PSNR: 20.53)</figcaption>
+                  </figure>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSection(header) {
+      const content = header.nextElementSibling;
+      const arrow = header.querySelector('.arrow');
+      
+      if (content.classList.contains('show')) {
+        content.classList.remove('show');
+        arrow.classList.remove('rotated');
+      } else {
+        content.classList.add('show');
+        arrow.classList.add('rotated');
+      }
+    }
+
+    function toggleImageSequence(header) {
+      const content = header.nextElementSibling;
+      const arrow = header.querySelector('.arrow');
+      
+      if (content.classList.contains('show')) {
+        content.classList.remove('show');
+        arrow.classList.remove('rotated');
+      } else {
+        content.classList.add('show');
+        arrow.classList.add('rotated');
+      }
+    }
+
+    // Optional: Expand first section by default
+    window.addEventListener('DOMContentLoaded', function() {
+      const firstSection = document.querySelector('.section-expander .section-content');
+      if (firstSection) {
+        firstSection.classList.add('show');
+        const firstArrow = firstSection.previousElementSibling.querySelector('.arrow');
+        if (firstArrow) {
+          firstArrow.classList.add('rotated');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
