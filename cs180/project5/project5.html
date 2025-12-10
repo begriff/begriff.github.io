@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=default'></script>
+  <title>CS180 Project 5: Diffusion Models - Part A</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      min-height: 100vh;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .page-wrapper {
+      background: white;
+      margin: 0 auto;
+      max-width: 1200px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      color: #ffffff;
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.5em;
+      font-weight: 700;
+      color: #ffffff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 1.2em;
+      font-weight: 300;
+      opacity: 0.95;
+    }
+
+    .container {
+      padding: 40px;
+    }
+
+    .overview {
+      background: #f8f9fa;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      border-left: 4px solid #000000;
+    }
+
+    .overview h3 {
+      margin-top: 0;
+      color: #000000;
+      font-weight: 600;
+    }
+
+    figure {
+      text-align: center;
+      margin: 20px 0;
+    }
+
+    img {
+      display: inline-block;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 100%;
+      height: auto;
+    }
+
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .image-pair {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .image-row {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+
+    .image-item {
+      text-align: center;
+    }
+
+    .image-item img {
+      max-width: 300px;
+      margin-bottom: 10px;
+    }
+
+    .image-item figcaption {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    h2 {
+      color: #000000;
+      border-bottom: 3px solid #000000;
+      padding-bottom: 10px;
+      margin-top: 40px;
+      font-weight: 600;
+    }
+
+    h3 {
+      color: #333;
+      margin-top: 30px;
+      font-weight: 600;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      border-left: 4px solid #000000;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .section-expander {
+      margin: 30px 0;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease;
+    }
+
+    .section-expander:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .section-header {
+      background: linear-gradient(135deg, #000000 0%, #ffffff 100%);
+      color: white;
+      padding: 20px 25px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.3em;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-content {
+      padding: 25px;
+      background: white;
+    }
+
+    .section-content.hidden {
+      display: none;
+    }
+
+    .toggle-icon {
+      transition: transform 0.3s ease;
+    }
+
+    .toggle-icon.rotated {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper">
+    <div class="header">
+      <h1>Diffusion Models</h1>
+      <div class="subtitle">CS180: Intro to Computer Vision and Computational Photography</div>
+      <div class="subtitle">University of California, Berkeley</div>
+      <div class="subtitle" style="margin-top: 20px; font-size: 1em;">Part A: The Power of Diffusion Models!</div>
+    </div>
+
+    <div class="container">
+      <div class="overview">
+        <h3>Overview</h3>
+        <p>In part A, I explore diffusion models, implement diffusion sampling loops, and use them for tasks such as inpainting and creating optical illusions. This project uses the DeepFloyd IF diffusion model, a two-stage model that generates high-quality images from text prompts.</p>
+      </div>
+
+      <h2>Part 0: Setup</h2>
+      <p>I used the DeepFloyd IF diffusion model and generated prompt embeddings for various text prompts. The following prompts were used throughout the project:</p>
+      
+      <pre><code>['a high quality picture',
+'an oil painting of a snowy mountain village',
+'a photo of the amalfi coast',
+'a photo of a man',
+'a photo of a hipster barista',
+'a photo of a dog',
+'an oil painting of people around a campfire',
+'an oil painting of an old man',
+'a lithograph of waterfalls',
+'a lithograph of a skull',
+'a man wearing a hat',
+'a high quality photo',
+'a rocket ship',
+'a pencil',
+'monkeys having a party',
+'a rhesus monkey drinking from a bottle of wine',
+'a crane and wrecking ball destroying a large tower',
+'river cutting through vast valley',
+'four-person rock band standing in a circle facing each other',
+'oil painting of a hamster',
+'anthropomorphic blue jay and anthropomorphic brown raccoon',
+'house made of graphics cards',
+'hamster driving a car',
+'oil painting of a bright light bulb',
+'oil painting of a canal',
+'watercolor painting of an ear',
+'watercolor painting of lips',
+'oil painting of a house',
+'oil painting of a boat',
+'a sketch of a bunny',
+'a sketch of a seal',
+'']</code></pre>
+
+      <h3>Sample Text Prompts and Generated Images</h3>
+      <p>I generated embeddings for various text prompts and experimented with different <code>num_inference_steps</code> values. Here are 3 selected prompts and their generated outputs:</p>
+      
+      <figure>
+        <img src="3pics.png" alt="Sample generated images">
+        <figcaption>
+          <strong>Left:</strong> "a rhesus monkey drinking from a bottle of wine"<br>
+          <strong>Middle:</strong> "oil painting of a hamster"<br>
+          <strong>Right:</strong> "anthropomorphic blue jay and anthropomorphic brown raccoon"
+        </figcaption>
+      </figure>
+
+      <p><strong>Random seed used:</strong> 9001</p>
+
+      <h2>Part 1: Sampling Loops</h2>
+
+      <h3>1.1 Implementing the Forward Process</h3>
+      <p>The forward process takes a clean image and adds noise to it. I implemented the <code>forward(im, t)</code> function and applied it to the Campanile test image at different noise levels.</p>
+      
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_1/campanile.png" alt="Original Campanile">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_250.png" alt="Noisy Campanile at t=250">
+          <figcaption>Noisy Campanile at t=250</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_500.png" alt="Noisy Campanile at t=500">
+          <figcaption>Noisy Campanile at t=500</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_750.png" alt="Noisy Campanile at t=750">
+          <figcaption>Noisy Campanile at t=750</figcaption>
+        </div>
+      </div>
+
+      <h3>1.2 Classical Denoising</h3>
+      <p>I attempted to denoise the noisy images using Gaussian blur filtering. As expected, classical methods struggle with heavily noisy images.</p>
+      
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_250.png" alt="Noisy at t=250">
+          <figcaption>Noisy Campanile at t=250</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_2/campanile_gaussian_denoise_250.png" alt="Gaussian Blur Denoising at t=250">
+          <figcaption>Gaussian Blur Denoising at t=250</figcaption>
+        </div>
+      </div>
+
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_500.png" alt="Noisy at t=500">
+          <figcaption>Noisy Campanile at t=500</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_2/campanile_gaussian_denoise_500.png" alt="Gaussian Blur Denoising at t=500">
+          <figcaption>Gaussian Blur Denoising at t=500</figcaption>
+        </div>
+      </div>
+
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_1/campanile_750.png" alt="Noisy at t=750">
+          <figcaption>Noisy Campanile at t=750</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_2/campanile_gaussian_denoise_750.png" alt="Gaussian Blur Denoising at t=750">
+          <figcaption>Gaussian Blur Denoising at t=750</figcaption>
+        </div>
+      </div>
+
+      <h3>1.3 One-Step Denoising</h3>
+      <p>Using the pretrained diffusion model UNet, we performed one-step denoising on the noisy images. The diffusion model does a much better job of projecting images onto the natural image manifold compared to classical methods.</p>
+      
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_original.png" alt="Original Campanile">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_250.png" alt="Noisy at t=250">
+          <figcaption>Noisy Campanile at t=250</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_250_denoised.png" alt="One-Step Denoised at t=250">
+          <figcaption>One-Step Denoised Campanile at t=250</figcaption>
+        </div>
+      </div>
+
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_500.png" alt="Noisy at t=500">
+          <figcaption>Noisy Campanile at t=500</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_500_denoised.png" alt="One-Step Denoised at t=500">
+          <figcaption>One-Step Denoised Campanile at t=500</figcaption>
+        </div>
+      </div>
+
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_750.png" alt="Noisy at t=750">
+          <figcaption>Noisy Campanile at t=750</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_3/campanile_750_denoised.png" alt="One-Step Denoised at t=750">
+          <figcaption>One-Step Denoised Campanile at t=750</figcaption>
+        </div>
+      </div>
+
+      <h3>1.4 Iterative Denoising</h3>
+      <p>I implemented iterative denoising using a strided timestep schedule, starting at timestep 990 with a stride of 30. This allows me to denoise images more effectively by iteratively removing noise step by step.</p>
+      
+      <p>Denoising progress (every 5th step):</p>
+      <div class="image-grid">
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_5.png" alt="Denoised step 5">
+          <figcaption>Step 5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_10.png" alt="Denoised step 10">
+          <figcaption>Step 10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_15.png" alt="Denoised step 15">
+          <figcaption>Step 15</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_20.png" alt="Denoised step 20">
+          <figcaption>Step 20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_25.png" alt="Denoised step 25">
+          <figcaption>Step 25</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_30.png" alt="Denoised step 30">
+          <figcaption>Step 30</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_35.png" alt="Denoised step 35">
+          <figcaption>Step 35</figcaption>
+        </div>
+      </div>
+
+      <p>Comparison of different denoising methods:</p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_4/original.png" alt="Original">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_35.png" alt="Iteratively Denoised">
+          <figcaption>Iteratively Denoised Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_onestep.png" alt="One-Step Denoised">
+          <figcaption>One-Step Denoised Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_4/denoised_gaussian.png" alt="Gaussian Blurred">
+          <figcaption>Gaussian Blurred Campanile</figcaption>
+        </div>
+      </div>
+
+      <h3>1.5 Diffusion Model Sampling</h3>
+      <p>By starting with pure noise and iteratively denoising, we can generate images from scratch. Here are 5 samples generated from the prompt "a high quality photo":</p>
+      
+      <div class="image-grid">
+        <div class="image-item">
+          <img src="part_a/1_5/0.png" alt="Sample 1">
+          <figcaption>Sample 1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_5/1.png" alt="Sample 2">
+          <figcaption>Sample 2</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_5/2.png" alt="Sample 3">
+          <figcaption>Sample 3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_5/3.png" alt="Sample 4">
+          <figcaption>Sample 4</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_5/4.png" alt="Sample 5">
+          <figcaption>Sample 5</figcaption>
+        </div>
+      </div>
+
+      <h3>1.6 Classifier-Free Guidance (CFG)</h3>
+      <p>Classifier-Free Guidance improves image quality by combining conditional and unconditional noise estimates. I implemented <code>iterative_denoise_cfg</code> and generated images with CFG scale of 7.5:</p>
+      
+      <div class="image-grid">
+        <div class="image-item">
+          <img src="part_a/1_6/0.png" alt="Sample 1 with CFG">
+          <figcaption>Sample 1 with CFG</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_6/1.png" alt="Sample 2 with CFG">
+          <figcaption>Sample 2 with CFG</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_6/2.png" alt="Sample 3 with CFG">
+          <figcaption>Sample 3 with CFG</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_6/3.png" alt="Sample 4 with CFG">
+          <figcaption>Sample 4 with CFG</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_6/4.png" alt="Sample 5 with CFG">
+          <figcaption>Sample 5 with CFG</figcaption>
+        </div>
+      </div>
+
+      <h3>1.7 Image-to-image Translation</h3>
+      <p>By adding noise to an image and then denoising it, we can make edits to existing images. The more noise we add, the larger the edit. This follows the SDEdit algorithm.</p>
+      
+      <h4>1.7.1 SDEdit on Campanile</h4>
+      <p>Edits of the Campanile image at different noise levels [1, 3, 5, 7, 10, 20] with the conditional text prompt "a high quality photo":</p>
+      
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_1.png" alt="SDEdit with i_start=1">
+          <figcaption>SDEdit with i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_3.png" alt="SDEdit with i_start=3">
+          <figcaption>SDEdit with i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_5.png" alt="SDEdit with i_start=5">
+          <figcaption>SDEdit with i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_7.png" alt="SDEdit with i_start=7">
+          <figcaption>SDEdit with i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_10.png" alt="SDEdit with i_start=10">
+          <figcaption>SDEdit with i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_20.png" alt="SDEdit with i_start=20">
+          <figcaption>SDEdit with i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/campanile_orig.png" alt="Original Campanile">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+      </div>
+
+      <h4>Additional Test Images</h4>
+      <p>Edits of 2 additional test images using the same SDEdit procedure with noise levels [1, 3, 5, 7, 10, 20] and the conditional text prompt "a high quality photo":</p>
+      
+      <h5>Test Image 1: Big Sur</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_1.png" alt="Big Sur at i_start=1">
+          <figcaption>Big Sur at i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_3.png" alt="Big Sur at i_start=3">
+          <figcaption>Big Sur at i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_5.png" alt="Big Sur at i_start=5">
+          <figcaption>Big Sur at i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_7.png" alt="Big Sur at i_start=7">
+          <figcaption>Big Sur at i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_10.png" alt="Big Sur at i_start=10">
+          <figcaption>Big Sur at i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_20.png" alt="Big Sur at i_start=20">
+          <figcaption>Big Sur at i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_orig.png" alt="Original Big Sur">
+          <figcaption>Original Big Sur</figcaption>
+        </div>
+      </div>
+
+      <h5>Test Image 2: Zoo</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_1.png" alt="Zoo at i_start=1">
+          <figcaption>Zoo at i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_3.png" alt="Zoo at i_start=3">
+          <figcaption>Zoo at i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_5.png" alt="Zoo at i_start=5">
+          <figcaption>Zoo at i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_7.png" alt="Zoo at i_start=7">
+          <figcaption>Zoo at i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_10.png" alt="Zoo at i_start=10">
+          <figcaption>Zoo at i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_20.png" alt="Zoo at i_start=20">
+          <figcaption>Zoo at i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/zoo_orig.png" alt="Original Zoo">
+          <figcaption>Original Zoo</figcaption>
+        </div>
+      </div>
+
+      <h4>1.7.2 Editing Hand-Drawn and Web Images</h4>
+      <p>SDEdit works particularly well with non-realistic images. Here are examples of web images and hand-drawn images edited using the same procedure:</p>
+      
+      <h5>Web Image: Big Sur</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_1.png" alt="Big Sur at i_start=1">
+          <figcaption>Big Sur at i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_3.png" alt="Big Sur at i_start=3">
+          <figcaption>Big Sur at i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_5.png" alt="Big Sur at i_start=5">
+          <figcaption>Big Sur at i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_7.png" alt="Big Sur at i_start=7">
+          <figcaption>Big Sur at i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_10.png" alt="Big Sur at i_start=10">
+          <figcaption>Big Sur at i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_20.png" alt="Big Sur at i_start=20">
+          <figcaption>Big Sur at i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/bigsur_orig.png" alt="Original Big Sur">
+          <figcaption>Original Big Sur</figcaption>
+        </div>
+      </div>
+
+      <h5>Hand-Drawn Images</h5>
+      <p>Horse:</p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_1.png" alt="Horse at i_start=1">
+          <figcaption>Horse at i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_3.png" alt="Horse at i_start=3">
+          <figcaption>Horse at i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_5.png" alt="Horse at i_start=5">
+          <figcaption>Horse at i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_7.png" alt="Horse at i_start=7">
+          <figcaption>Horse at i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_10.png" alt="Horse at i_start=10">
+          <figcaption>Horse at i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_20.png" alt="Horse at i_start=20">
+          <figcaption>Horse at i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/horse_orig.png" alt="Original Horse">
+          <figcaption>Original Horse</figcaption>
+        </div>
+      </div>
+
+      <p>Water:</p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_1.png" alt="Water at i_start=1">
+          <figcaption>Water at i_start=1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_3.png" alt="Water at i_start=3">
+          <figcaption>Water at i_start=3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_5.png" alt="Water at i_start=5">
+          <figcaption>Water at i_start=5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_7.png" alt="Water at i_start=7">
+          <figcaption>Water at i_start=7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_10.png" alt="Water at i_start=10">
+          <figcaption>Water at i_start=10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_20.png" alt="Water at i_start=20">
+          <figcaption>Water at i_start=20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_1/water_orig.png" alt="Original Water">
+          <figcaption>Original Water</figcaption>
+        </div>
+      </div>
+
+      <h4>1.7.3 Inpainting</h4>
+      <p>I implemented inpainting using the RePaint algorithm, which allows me to fill in masked regions of an image. Here are examples of inpainting results:</p>
+      
+      <h5>Campanile Inpainting</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/campanile_orig.png" alt="Original Campanile">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/campanile_mask.png" alt="Mask">
+          <figcaption>Mask</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/campanile_toreplace.png" alt="Hole to Fill">
+          <figcaption>Hole to Fill</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/campanile_inpainted.png" alt="Campanile Inpainted">
+          <figcaption>Campanile Inpainted</figcaption>
+        </div>
+      </div>
+
+      <h5>Minecraft Inpainting</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/minecraft_orig.png" alt="Original Minecraft">
+          <figcaption>Original Minecraft</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/minecraft_mask.png" alt="Mask">
+          <figcaption>Mask</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/minecraft_toreplace.png" alt="Hole to Fill">
+          <figcaption>Hole to Fill</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/minecraft_inpainted.png" alt="Minecraft Inpainted">
+          <figcaption>Minecraft Inpainted</figcaption>
+        </div>
+      </div>
+
+      <h5>Statue Inpainting</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/statue_orig.png" alt="Original Statue">
+          <figcaption>Original Statue</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/statue_mask.png" alt="Mask">
+          <figcaption>Mask</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/statue_toreplace.png" alt="Hole to Fill">
+          <figcaption>Hole to Fill</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_2/statue_inpainted.png" alt="Statue Inpainted">
+          <figcaption>Statue Inpainted</figcaption>
+        </div>
+      </div>
+
+      <h4>1.7.4 Text-Conditional Image-to-image Translation</h4>
+      <p>By guiding the SDEdit projection with text prompts, we can control the style and content of the generated images. Here are examples using different text prompts:</p>
+      
+      <h5>Campanile with "a rocket ship" prompt</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_1.png" alt="Rocket Ship at noise level 1">
+          <figcaption>Rocket Ship at noise level 1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_3.png" alt="Rocket Ship at noise level 3">
+          <figcaption>Rocket Ship at noise level 3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_5.png" alt="Rocket Ship at noise level 5">
+          <figcaption>Rocket Ship at noise level 5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_7.png" alt="Rocket Ship at noise level 7">
+          <figcaption>Rocket Ship at noise level 7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_10.png" alt="Rocket Ship at noise level 10">
+          <figcaption>Rocket Ship at noise level 10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_20.png" alt="Rocket Ship at noise level 20">
+          <figcaption>Rocket Ship at noise level 20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/campanile_orig.png" alt="Original Campanile">
+          <figcaption>Original Campanile</figcaption>
+        </div>
+      </div>
+
+      <h5>Test Image 1: Regshow</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_1.png" alt="Regshow at noise level 1">
+          <figcaption>Regshow at noise level 1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_3.png" alt="Regshow at noise level 3">
+          <figcaption>Regshow at noise level 3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_5.png" alt="Regshow at noise level 5">
+          <figcaption>Regshow at noise level 5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_7.png" alt="Regshow at noise level 7">
+          <figcaption>Regshow at noise level 7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_10.png" alt="Regshow at noise level 10">
+          <figcaption>Regshow at noise level 10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_20.png" alt="Regshow at noise level 20">
+          <figcaption>Regshow at noise level 20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_orig.png" alt="Original Regshow">
+          <figcaption>Original Regshow</figcaption>
+        </div>
+      </div>
+
+      <h5>Test Image 2: Road</h5>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_1.png" alt="Regshow at noise level 1">
+          <figcaption>Regshow at noise level 1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_3.png" alt="Regshow at noise level 3">
+          <figcaption>Regshow at noise level 3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_5.png" alt="Regshow at noise level 5">
+          <figcaption>Regshow at noise level 5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_7.png" alt="Regshow at noise level 7">
+          <figcaption>Regshow at noise level 7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_10.png" alt="Regshow at noise level 10">
+          <figcaption>Regshow at noise level 10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_20.png" alt="Regshow at noise level 20">
+          <figcaption>Regshow at noise level 20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/regshow_orig.png" alt="Original Regshow">
+          <figcaption>Original Regshow</figcaption>
+        </div>
+      </div>
+
+      <p>Road:</p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_1.png" alt="Road at noise level 1">
+          <figcaption>Road at noise level 1</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_3.png" alt="Road at noise level 3">
+          <figcaption>Road at noise level 3</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_5.png" alt="Road at noise level 5">
+          <figcaption>Road at noise level 5</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_7.png" alt="Road at noise level 7">
+          <figcaption>Road at noise level 7</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_10.png" alt="Road at noise level 10">
+          <figcaption>Road at noise level 10</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_20.png" alt="Road at noise level 20">
+          <figcaption>Road at noise level 20</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_7/1_7_3/road_orig.png" alt="Original Road">
+          <figcaption>Original Road</figcaption>
+        </div>
+      </div>
+
+      <h3>1.8 Visual Anagrams</h3>
+      <p>Visual anagrams are optical illusions that change appearance when flipped upside down. I implemented the visual anagrams algorithm by averaging noise estimates from the original and flipped images with different prompts.</p>
+      
+      <h4>Example 1: Bunny/Seal</h4>
+      <div class="image-pair">
+        <div class="image-item">
+          <img src="part_a/1_8/bunny_seal_up.png" alt="Bunny/Seal Upright">
+          <figcaption>Upright: "a sketch of a bunny"</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_8/bunny_seal_down.png" alt="Bunny/Seal Flipped">
+          <figcaption>Flipped: "a sketch of a seal"</figcaption>
+        </div>
+      </div>
+
+      <h4>Example 2: Light Bulb/Canal</h4>
+      <div class="image-pair">
+        <div class="image-item">
+          <img src="part_a/1_8/light_canal_up.png" alt="Light/Canal Upright">
+          <figcaption>Upright: "oil painting of a bright light bulb"</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_a/1_8/light_canal_down.png" alt="Light/Canal Flipped">
+          <figcaption>Flipped: "oil painting of a canal"</figcaption>
+        </div>
+      </div>
+
+      <h3>1.9 Hybrid Images</h3>
+      <p>Using Factorized Diffusion, we created hybrid images by combining low frequencies from one noise estimate with high frequencies from another. This creates images that appear different when viewed at different distances or scales.</p>
+      
+      <h4>Example 1: Ear/Mouth</h4>
+      <div class="image-item">
+        <img src="part_a/1_9/ear_mouth.png" alt="Hybrid image of ear and mouth">
+        <figcaption>Hybrid image: "watercolor painting of an ear" (low freq) + "watercolor painting of lips" (high freq)</figcaption>
+      </div>
+
+      <h4>Example 2: Old Man/Hamster</h4>
+      <div class="image-item">
+        <img src="part_a/1_9/old_man_hamster.png" alt="Hybrid image of old man and hamster">
+        <figcaption>Hybrid image: "an oil painting of an old man" (low freq) + "oil painting of a hamster" (high freq)</figcaption>
+      </div>
+
+      <h2>Conclusion</h2>
+      <p>This project explored the power of diffusion models for various image generation and manipulation tasks. I implemented sampling loops, classifier-free guidance, inpainting, visual anagrams, and hybrid images, demonstrating the versatility of diffusion models in computational photography.</p>
+
+      <div style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #ddd; text-align: center; color: #666;">
+        <p>CS180: Intro to Computer Vision and Computational Photography</p>
+        <p>University of California, Berkeley</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Add interactivity for collapsible sections if needed
+    document.querySelectorAll('.section-header').forEach(header => {
+      header.addEventListener('click', function() {
+        const content = this.nextElementSibling;
+        const icon = this.querySelector('.toggle-icon');
+        content.classList.toggle('hidden');
+        if (icon) {
+          icon.classList.toggle('rotated');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
