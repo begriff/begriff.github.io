@@ -203,13 +203,13 @@
       <h1>Diffusion Models</h1>
       <div class="subtitle">CS180: Intro to Computer Vision and Computational Photography</div>
       <div class="subtitle">University of California, Berkeley</div>
-      <div class="subtitle" style="margin-top: 20px; font-size: 1em;">Part A: The Power of Diffusion Models!</div>
+      <div class="subtitle" style="margin-top: 20px; font-size: 1em;">Flow Matching from Scratch!</div>
     </div>
 
     <div class="container">
       <div class="overview">
         <h3>Overview</h3>
-        <p>In part A, I explore diffusion models, implement diffusion sampling loops, and use them for tasks such as inpainting and creating optical illusions. This project uses the DeepFloyd IF diffusion model, a two-stage model that generates high-quality images from text prompts.</p>
+        <p>In this project, I train my own flow matching model on MNIST. Part A explores diffusion models using pretrained models, while Part B focuses on building and training UNet architectures from scratch for flow matching. I implement single-step denoising, iterative flow matching, and class-conditioned generation.</p>
       </div>
 
       <h2>Part 0: Setup</h2>
@@ -877,6 +877,172 @@
         <figcaption>Hybrid image: "an oil painting of an old man" (low freq) + "oil painting of a hamster" (high freq)</figcaption>
       </div>
 
+      <h2>Part B: Flow Matching from Scratch</h2>
+      
+      <div class="overview">
+        <h3>Part B Overview</h3>
+        <p>In Part B, I build and train UNet architectures from scratch to perform flow matching on MNIST. This includes implementing single-step denoising, time-conditioned flow matching, and class-conditioned generation with classifier-free guidance.</p>
+      </div>
+
+      <h2>Part 1: Training a Single-Step Denoising UNet</h2>
+      <p>I start by building a simple one-step denoiser that maps noisy images to clean images using a UNet architecture.</p>
+
+      <h3>1.1 Implementing the UNet</h3>
+      <p>I implemented a UNet architecture with downsampling and upsampling blocks with skip connections. The architecture uses Conv2d, ConvTranspose2d, BatchNorm2d, GELU activations, and AvgPool2d operations with a hidden dimension D = 128.</p>
+
+      <h3>1.2 Using the UNet to Train a Denoiser</h3>
+      <p>I trained the UNet to denoise noisy images by optimizing an L2 loss. For each training batch, I generated noisy images from clean MNIST digits using a noising process with random noise levels σ.</p>
+
+      <p><strong>Visualization of the Noising Process:</strong></p>
+      <p>I visualized the noising process by applying different noise levels σ to normalized clean images. As σ increases, the images become progressively noisier, eventually approaching pure noise.</p>
+      <figure>
+        <img src="part_b/1_2/output.png" alt="Noising process visualization">
+        <figcaption>Visualization of the noising process showing how images become progressively noisier as σ increases. The images are normalized, and you can see the transition from clean digits to increasingly noisy versions.</figcaption>
+      </figure>
+
+      <h4>1.2.1 Training</h4>
+      <p>I trained the denoiser on the MNIST training set with the following setup:</p>
+      <ul>
+        <li><strong>Dataset:</strong> MNIST training set, shuffled</li>
+        <li><strong>Batch size:</strong> 256</li>
+        <li><strong>Epochs:</strong> 5</li>
+        <li><strong>Model:</strong> UNet with hidden dimension D = 128</li>
+        <li><strong>Optimizer:</strong> Adam with learning rate 1e-4</li>
+        <li><strong>Noise level:</strong> σ = 0.5 (applied randomly during training)</li>
+      </ul>
+
+      <p><strong>Training Loss Curve:</strong></p>
+      <figure>
+        <img src="part_b/1_2/1_2_1/train_loss.png" alt="Training loss curve for single-step denoising">
+        <figcaption>Training loss curve showing the L2 loss decreasing over iterations during 5 epochs of training</figcaption>
+      </figure>
+
+      <p><strong>Sample Results on Test Set:</strong></p>
+      <figure>
+        <img src="part_b/1_2/1_2_1/denoise.png" alt="Denoising results after 1st and 5th epoch">
+        <figcaption>Sample denoising results on test set digits with noise level σ = 0.5 after the 1st and 5th epoch</figcaption>
+      </figure>
+
+      <h4>1.2.2 Out-of-Distribution Testing</h4>
+      <p>I tested the denoiser on test set digits with varying noise levels that it wasn't trained on. This shows how the model generalizes to different noise levels.</p>
+      
+      <figure>
+        <img src="part_b/1_2/1_2_2/ood.png" alt="Out-of-distribution noise level testing">
+        <figcaption>Denoiser results on test set digits with varying out-of-distribution noise levels σ. The same image is shown with different noise levels to demonstrate the model's generalization capability.</figcaption>
+      </figure>
+
+      <h4>1.2.3 Denoising Pure Noise</h4>
+      <p>To explore denoising as a generative task, I trained the model to denoise pure random Gaussian noise (where x_noisy = ε with ε ~ N(0, I)). This allows the model to generate images from scratch by starting with pure noise.</p>
+
+      <p><strong>Training Loss Curve:</strong></p>
+      <figure>
+        <img src="part_b/1_2/1_2_3/train_loss.png" alt="Training loss curve for pure noise denoising">
+        <figcaption>Training loss curve for the model trained to denoise pure noise over 5 epochs</figcaption>
+      </figure>
+
+      <p><strong>Sample Results:</strong></p>
+      <figure>
+        <img src="part_b/1_2/1_2_3/epochs_1_5.png" alt="Pure noise denoising results after 1st and 5th epoch">
+        <figcaption>Sample results on pure noise after the 1st and 5th epoch. The model attempts to generate digits from pure noise.</figcaption>
+      </figure>
+
+      <p><strong>Patterns Observed:</strong></p>
+      <p>When sampling from the denoiser trained on pure noise, I observed that the outputs tended to converge to blurry, averaged representations of digits rather than distinct, sharp digit images. This happens because with an MSE loss, the model learns to predict the point that minimizes the sum of squared distances to all training examples. In other words, this is the centroid of the training distribution.</p>
+
+      <h2>Part 2: Training a Flow Matching Model</h2>
+      <p>To achieve better generative results, I implemented iterative denoising using flow matching. Instead of one-step denoising, I train a UNet to predict the "flow" from noisy data to clean data, allowing for iterative refinement.</p>
+
+      <h3>2.1 Adding Time Conditioning to UNet</h3>
+      <p>I modified the UNet architecture to accept a time conditioning signal t ∈ [0, 1] using FCBlocks (fully-connected blocks). The time signal is embedded and used to modulate the unflatten and upsampling layers, allowing the model to condition its predictions on the current timestep in the denoising process.</p>
+
+      <h3>2.2 Training the UNet</h3>
+      <p>I trained the time-conditioned UNet to predict the flow at timestep t given a noisy image x_t. The training setup:</p>
+      <ul>
+        <li><strong>Dataset:</strong> MNIST training set, shuffled</li>
+        <li><strong>Batch size:</strong> 64</li>
+        <li><strong>Model:</strong> Time-conditioned UNet with hidden dimension D = 64</li>
+        <li><strong>Optimizer:</strong> Adam with initial learning rate 1e-2</li>
+        <li><strong>Learning rate scheduler:</strong> ExponentialLR with gamma = 0.9 (applied after each epoch)</li>
+        <li><strong>Training:</strong> Random timesteps t and random noise are sampled for each batch</li>
+      </ul>
+
+      <p><strong>Training Loss Curve:</strong></p>
+      <figure>
+        <img src="part_b/2_2/unet_train_loss.png" alt="Training loss curve for time-conditioned UNet">
+        <figcaption>Training loss curve for the time-conditioned UNet over the entire training process</figcaption>
+      </figure>
+
+      <h3>2.3 Sampling from the UNet</h3>
+      <p>I used the trained time-conditioned UNet for iterative denoising by starting with pure noise and iteratively applying the predicted flow. The sampling process uses Algorithm B.2 to generate images from scratch.</p>
+
+      <p><strong>Sampling Results:</strong></p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_b/2_3/epoch_1.png" alt="Sampling results after 1 epoch">
+          <figcaption>Sampling results after 1 epoch</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_3/epoch_5.png" alt="Sampling results after 5 epochs">
+          <figcaption>Sampling results after 5 epochs</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_3/epoch_10.png" alt="Sampling results after 10 epochs">
+          <figcaption>Sampling results after 10 epochs</figcaption>
+        </div>
+      </div>
+      <p>The results show legible digits emerging from pure noise, with quality improving as training progresses. While not perfect, the iterative flow matching approach produces much better results than one-step denoising.</p>
+
+      <h3>2.4 Adding Class-Conditioning to UNet</h3>
+      <p>To improve results and provide control over generation, I added class-conditioning to the UNet. The class vector c is a one-hot encoding of the digit class (0-9). I implemented classifier-free guidance by dropping the class conditioning 10% of the time (p = 0.1) during training, setting c = 0 for unconditional generation.</p>
+
+      <h3>2.5 Training the UNet</h3>
+      <p>I trained the class-conditioned UNet using the same setup as the time-only model, with the addition of class conditioning. The model learns to generate specific digits when conditioned on a class, and can also perform unconditional generation.</p>
+
+      <p><strong>Training Loss Curve:</strong></p>
+      <figure>
+        <img src="part_b/2_5/train_loss.png" alt="Training loss curve for class-conditioned UNet">
+        <figcaption>Training loss curve for the class-conditioned UNet over the entire training process</figcaption>
+      </figure>
+
+      <h3>2.6 Sampling from the UNet</h3>
+      <p>I sampled from the class-conditioned UNet using classifier-free guidance with guidance scale w = 1.5. This allows for controlled generation of specific digits while maintaining good image quality.</p>
+
+      <p><strong>Sampling Results with Learning Rate Scheduler:</strong></p>
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_1.png" alt="Class-conditioned sampling after 1 epoch">
+          <figcaption>Class-conditioned sampling after 1 epoch (with scheduler)</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_5.png" alt="Class-conditioned sampling after 5 epochs">
+          <figcaption>Class-conditioned sampling after 5 epochs (with scheduler)</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_10.png" alt="Class-conditioned sampling after 10 epochs">
+          <figcaption>Class-conditioned sampling after 10 epochs (with scheduler). Shows 4 instances of each digit (0-9).</figcaption>
+        </div>
+      </div>
+
+      <p><strong>Sampling Results without Learning Rate Scheduler:</strong></p>
+      <p>I removed the exponential learning rate scheduler and compared the results. It turns out that the model is quite robust to choice of learning rate and did not need any changes.</p>
+      
+      <div class="image-row">
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_1_no_sched.png" alt="Class-conditioned sampling after 1 epoch (no scheduler)">
+          <figcaption>Class-conditioned sampling after 1 epoch (without scheduler)</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_5_no_sched.png" alt="Class-conditioned sampling after 5 epochs (no scheduler)">
+          <figcaption>Class-conditioned sampling after 5 epochs (without scheduler)</figcaption>
+        </div>
+        <div class="image-item">
+          <img src="part_b/2_6/epoch_10_no_sched.png" alt="Class-conditioned sampling after 10 epochs (no scheduler)">
+          <figcaption>Class-conditioned sampling after 10 epochs (without scheduler). Shows 4 instances of each digit (0-9).</figcaption>
+        </div>
+      </div>
+
+      <p><strong>Description of Changes:</strong></p>
+      <p>To maintain performance without the exponential learning rate scheduler, I didn't have to do anything. It turns out that the model is quite robust to choice of learning rate.</p>
       <div style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #ddd; text-align: center; color: #666;">
         <p>University of California, Berkeley</p>
       </div>
