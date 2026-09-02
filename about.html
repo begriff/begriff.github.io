@@ -4,12 +4,45 @@
     <title>About</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
+            background: #000;
+            color: #00ff41;
+            font-family: "Courier New", Courier, monospace;
+            margin: 40px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            font-size: 1.4em;
+            font-weight: normal;
+            margin-bottom: 1.5em;
+        }
+
+        nav {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4em;
+        }
+
+        a {
+            color: #00ff41;
+            text-decoration: none;
+        }
+
+        a:hover {
+            background: #00ff41;
+            color: #000;
+        }
+
+        a::before {
+            content: "$ ";
         }
     </style>
 </head>
 <body>
-    <h1>wip</h1>
+    <h1>/home/kevin/about</h1>
+    <p>wip</p>
+    <nav>
+        <a href="index.html">home</a>
+    </nav>
 </body>
 </html>
